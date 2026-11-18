@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Medical Record #MR-{{ "%04d"|format(record.id) }} — MediCore{% endblock %}
+{% block page_title %}Clinical Medical Record{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 no-print">
+  <div class="d-flex align-items-center gap-2">
+    <a href="{{ url_for('records.list_records') }}" class="btn-secondary-brand">
+      <i class="bi bi-arrow-left"></i> Back to Records
+    </a>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <button onclick="window.print()" class="btn-secondary-brand">
+      <i class="bi bi-printer"></i> Print Record
+    </button>
+    {% if current_user.role in ['admin', 'doctor'] %}
+    <a href="{{ url_for('records.edit_record', record_id=record.id) }}" class="btn btn-outline-primary">
+      <i class="bi bi-pencil-square"></i> Update Record
+    </a>
+    <form method="post" action="{{ url_for('records.delete_record', record_id=record.id) }}" onsubmit="return confirm('Are you sure you want to permanently delete this medical record?');">
+      {% include "_csrf.html" %}
+      <button class="btn btn-outline-danger" type="submit" title="Delete Record">
+        <i class="bi bi-trash"></i> Delete
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="invoice-sheet">
+  <!-- Record Header -->
+  <div class="invoice-header">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="MediCore" height="28">
+      </div>
+      <div class="text-muted small">MediCore Super Specialty Healthcare &amp; Research Institute</div>
+      <div class="text-muted small">Panampilly Nagar, Kochi, Kerala, India &bull; Reg: MC-KL-2026-9812</div>
+    </div>
+    <div class="text-end">
+      <span class="badge bg-light text-dark border px-3 py-2 fw-bold fs-6">RECORD #MR-{{ "%04d"|format(record.id) }}</span>
+      <div class="text-muted small mt-1">Visit Date: {{ record.visit_date }}</div>
+    </div>
+  </div>
+
+  <!-- Parties: Patient & Attending Physician -->
+  <div class="invoice-parties">
+    <div class="invoice-meta-box">
+      <div class="fw-bold text-dark mb-1 text-uppercase small text-muted">Patient Information</div>
+      <div class="fs-6 fw-semibold text-dark">{{ record.patient_name }}</div>
+      <div class="text-muted mt-1">DOB: {{ record.date_of_birth or "—" }} &bull; Gender: {{ record.gender or "—" }}</div>
+      <div class="text-muted">Blood Group: <strong>{{ record.blood_group or "—" }}</strong></div>
+      <div class="text-muted">Contact: {{ record.patient_phone or "—" }}</div>
+    </div>
+
+    <div class="invoice-meta-box">
+      <div class="fw-bold text-dark mb-1 text-uppercase small text-muted">Attending Physician</div>
+      <div class="fs-6 fw-semibold text-dark">{{ record.doctor_name or "Unassigned Specialist" }}</div>
+      <div class="text-muted mt-1">{{ record.doctor_specialty or "Clinical Consultant" }}</div>
+      <div class="text-muted">{{ record.department_name or "General Medicine" }} Department</div>
+      <div class="text-muted">MediCore Kerala Medical Council Verified</div>
+    </div>
+  </div>
+
+  <!-- Clinical Diagnosis & Evaluation -->
+  <div class="mb-4">
+    <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+      <i class="bi bi-clipboard2-pulse text-teal me-1"></i> Clinical Diagnosis
+    </h6>
+    <div class="p-3 bg-light rounded border">
+      <div class="fw-semibold text-dark fs-6">{{ record.diagnosis or "Clinical examination and evaluation." }}</div>
+    </div>
+  </div>
+
+  <!-- Clinical Progress & Notes -->
+  <div class="mb-4">
+    <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+      <i class="bi bi-journal-medical text-teal me-1"></i> Physician's Clinical Notes &amp; Observations
+    </h6>
+    <div class="p-3 bg-light rounded border text-secondary" style="line-height: 1.7; white-space: pre-line;">
+      {{ record.notes or "No clinical notes documented for this visit." }}
+    </div>
+  </div>
+
+  <!-- Prescription & Therapy Orders -->
+  <div class="mb-4">
+    <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+      <i class="bi bi-capsule text-teal me-1"></i> Rx &bull; Medical Prescription &amp; Management Plan
+    </h6>
+    <div class="p-3 rounded border" style="background-color: var(--teal-50); border-color: var(--teal-100) !important;">
+      <div class="fw-bold text-teal mb-2" style="font-size: 1.1rem;">&#8478;</div>
+      <div class="text-dark fw-medium" style="line-height: 1.8; white-space: pre-line;">
+        {{ record.prescription or "No medications prescribed during this consultation." }}
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-end pt-4 border-top mt-4 text-muted small">
+    <div>
+      <div>Document generated electronically via MediCore Clinical OS.</div>
+      <div>Official Kerala Healthcare Records Standard Compliant.</div>
+    </div>
+    <div class="text-end">
+      <div class="fw-bold text-dark">{{ record.doctor_name or "Medical Officer" }}</div>
+      <div>Authorized Signatory</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

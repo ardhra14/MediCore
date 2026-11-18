@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Invoice #{{ invoice.id }} — MediCore{% endblock %}
+{% block page_title %}Invoice #{{ invoice.id }}{% endblock %}
+{% block content %}
+<div class="card-surface">
+  <div class="card-header-flex">
+    <h6 class="card-header-title mb-0"><i class="bi bi-receipt text-teal"></i> TAX INVOICE</h6>
+    <span class="badge-status badge-{{ 'confirmed' if invoice.status == 'paid' else 'pending' }}">{{ invoice.status|upper }}</span>
+  </div>
+  <div class="p-4">
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="text-muted small">Patient</div>
+        <div class="fw-semibold">{{ invoice.patient_name }}</div>
+        <div class="small text-muted">{{ invoice.patient_phone or '' }}</div>
+      </div>
+      <div class="col-md-6 text-md-end">
+        <div class="text-muted small">Issued</div>
+        <div>{{ invoice.issued_at[:16] }}</div>
+        <div class="small text-muted">Paid: {{ invoice.paid_at[:16] if invoice.paid_at else 'Not paid' }}</div>
+      </div>
+    </div>
+    <hr>
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <div class="text-muted small">Amount</div>
+        <div class="display-6">Rs. {{ "{:,.2f}".format(invoice.amount) }}</div>
+      </div>
+      {% if invoice.status != 'paid' %}
+      <form method="post" action="{{ url_for('billing.mark_paid', invoice_id=invoice.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-primary-brand btn-sm" type="submit"><i class="bi bi-check2-circle"></i> Mark Paid</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

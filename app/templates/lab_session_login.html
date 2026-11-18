@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Vulnerable Session Login — MediCore{% endblock %}
+{% block public_content %}
+<div class="public-wrapper">
+  <div class="card-surface mx-auto" style="max-width: 640px;">
+    <div class="card-header-flex">
+      <h6 class="card-header-title mb-0"><i class="bi bi-shield-exclamation text-danger"></i> Vulnerable Session Lab</h6>
+      <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Sequential Cookies</span>
+    </div>
+    <div class="p-4">
+      {% include "_flash.html" %}
+      <p class="text-muted">This local-only login issues intentionally weak lab cookies for demonstrating session prediction.</p>
+      <form method="post" action="{{ url_for('vuln_session.login') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3"><label class="form-label">Email</label><input class="form-control" type="email" name="email" required></div>
+        <div class="mb-3"><label class="form-label">Password</label><input class="form-control" type="password" name="password" required></div>
+        <button class="btn btn-danger btn-sm" type="submit"><i class="bi bi-box-arrow-in-right"></i> Lab Login</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

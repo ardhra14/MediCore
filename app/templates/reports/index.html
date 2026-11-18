@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Reports — MediCore{% endblock %}
+{% block page_title %}Clinical &amp; Financial Analytics{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  {% for item in [
+    ('Registered Patients', summary.patients, 'people', 'teal'),
+    ('Doctors', summary.doctors, 'heart-pulse', 'blue'),
+    ('Appointments', summary.appointments, 'calendar2-check', 'indigo'),
+  ] %}
+  <div class="col-6 col-xl-2">
+    <div class="stat-card">
+      <div class="stat-header"><span class="stat-label">{{ item[0] }}</span><div class="stat-icon icon-{{ item[3] }}"><i class="bi bi-{{ item[2] }}"></i></div></div>
+      <div class="stat-value">{{ item[1] }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card-surface mb-4">
+  <div class="card-header-flex"><h6 class="card-header-title mb-0"><i class="bi bi-download text-teal"></i> CSV Exports</h6></div>
+  <div class="p-3 d-flex gap-2 flex-wrap">
+    <a class="btn btn-secondary-brand btn-sm" href="{{ url_for('reports.export_csv', dataset='appointments') }}">Appointments</a>
+    <a class="btn btn-secondary-brand btn-sm" href="{{ url_for('reports.export_csv', dataset='billing') }}">Billing</a>
+    <a class="btn btn-secondary-brand btn-sm" href="{{ url_for('reports.export_csv', dataset='patients') }}">Patients</a>
+  </div>
+</div>
+
+<div class="card-surface">
+  <div class="card-header-flex"><h6 class="card-header-title mb-0"><i class="bi bi-bar-chart-line text-teal"></i> Doctor Workload</h6></div>
+  <div class="table-responsive-clean">
+    <table class="table-clean">
+      <thead><tr><th>Doctor</th><th>Total</th><th>Completed</th></tr></thead>
+      <tbody>
+      {% for row in doctor_workload %}
+        <tr><td class="table-cell-title">{{ row.full_name }}</td><td>{{ row.total_appointments }}</td><td>{{ row.completed_appointments }}</td></tr>
+      {% else %}
+        <tr><td colspan="3" class="text-center text-muted py-3">No doctor workload data.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

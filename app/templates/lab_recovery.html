@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Vulnerable Password Recovery Lab — MediCore{% endblock %}
+{% block public_content %}
+<div class="public-wrapper">
+  <div class="card-surface mx-auto" style="max-width: 640px;">
+    <div class="card-header-flex">
+      <h6 class="card-header-title mb-0"><i class="bi bi-shield-exclamation text-danger"></i> Vulnerable Password Recovery Lab</h6>
+      <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Intentionally Insecure</span>
+    </div>
+    <div class="p-4">
+      {% include "_flash.html" %}
+      <p class="text-muted">This isolated lab demonstrates predictable password-reset tokens for local security training only.</p>
+      <form method="post" action="{{ url_for('vuln_recovery.forgot_password') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input class="form-control" type="email" name="email" required>
+        </div>
+        <button class="btn btn-danger btn-sm" type="submit"><i class="bi bi-key"></i> Generate Demo Reset Token</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

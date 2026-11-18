@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Create Patient Account — MediCore{% endblock %}
+{% block public_content %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="brand">
+      <a href="{{ url_for('public.landing') }}">
+        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="MediCore" height="34">
+      </a>
+    </div>
+
+    <h1>Patient Registration</h1>
+    <p class="auth-subtext">Create an online account to manage appointments and records</p>
+
+    <form method="post">
+      {% include "_csrf.html" %}
+      <div class="mb-3">
+        <label class="form-label">Full Legal Name <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text bg-white text-muted"><i class="bi bi-person"></i></span>
+          <input class="form-control" name="full_name" required placeholder="e.g. Eldho Paulose">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Email Address <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text bg-white text-muted"><i class="bi bi-envelope"></i></span>
+          <input class="form-control" type="email" name="email" required placeholder="name@domain.com">
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label">Choose Password <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text bg-white text-muted"><i class="bi bi-lock"></i></span>
+          <input class="form-control" type="password" name="password" minlength="8" required placeholder="At least 8 characters">
+        </div>
+        <div class="form-text">Must be at least 8 characters long.</div>
+      </div>
+
+      <button class="btn-primary-brand w-100 py-2 mb-3" type="submit">
+        <i class="bi bi-person-check"></i> Complete Account Creation
+      </button>
+    </form>
+
+    <div class="text-center text-muted small pt-2 border-top">
+      <span>Already have a MediCore account?</span>
+      <a href="{{ url_for('auth.login') }}" class="fw-medium text-teal ms-1">Sign in here</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

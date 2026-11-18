@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Departments — MediCore{% endblock %}
+{% block page_title %}Clinical &amp; Hospital Departments{% endblock %}
+
+{% block content %}
+<div class="card-surface">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h6 class="card-header-title mb-0"><i class="bi bi-diagram-3 text-teal"></i> Hospital Department Units</h6>
+      <span class="text-muted small">Specialized divisions and clinical care wards</span>
+    </div>
+    {% if current_user.role == 'admin' %}
+    <a href="{{ url_for('departments.new_department') }}" class="btn-primary-brand">
+      <i class="bi bi-plus-circle"></i> Add Department
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="table-responsive-clean">
+    <table class="table-clean">
+      <thead>
+        <tr>
+          <th>Department Name</th>
+          <th>Description &amp; Scope</th>
+          <th>Specialists</th>
+          <th>Staff</th>
+          <th>Total Bookings</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for d in departments %}
+        <tr>
+          <td>
+            <a href="{{ url_for('departments.view_department', dep_id=d.id) }}" class="table-cell-title">
+              {{ d.name }}
+            </a>
+          </td>
+          <td class="text-secondary small" style="max-width: 320px;">
+            {{ d.description or "—" }}
+          </td>
+          <td>
+            <span class="badge bg-light text-dark border">{{ d.doctor_count }} doctors</span>
+          </td>
+          <td>
+            <span class="badge bg-light text-muted border">{{ d.staff_count }} staff</span>
+          </td>
+          <td>
+            <strong>{{ d.appointment_count }}</strong>
+          </td>
+          <td class="text-end">
+            <div class="d-inline-flex gap-1">
+              <a href="{{ url_for('departments.view_department', dep_id=d.id) }}" class="btn btn-sm btn-outline-secondary py-0 px-2" title="View Department Wards">
+                <i class="bi bi-eye"></i> View
+              </a>
+              {% if current_user.role == 'admin' %}
+              <a href="{{ url_for('departments.edit_department', dep_id=d.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Update Department Details">
+                <i class="bi bi-pencil-square"></i> Update
+              </a>
+              <form method="post" action="{{ url_for('departments.delete_department', dep_id=d.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete department {{ d.name }}?');">
+                {% include "_csrf.html" %}
+                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Delete Department">
+                  <i class="bi bi-trash"></i> Delete
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <div class="empty-state-icon"><i class="bi bi-diagram-3"></i></div>
+              <div class="empty-state-title">No departments configured</div>
+              <div class="empty-state-text">Create departments to categorize doctors and organize clinical staff.</div>
+              {% if current_user.role == 'admin' %}
+              <a href="{{ url_for('departments.new_department') }}" class="btn-primary-brand btn-sm">Create Department</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

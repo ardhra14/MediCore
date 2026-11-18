@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Appointments — MediCore{% endblock %}
+{% block page_title %}Appointment Scheduling &amp; Consultations{% endblock %}
+
+{% block content %}
+<div class="card-surface">
+  <!-- Filters Bar -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <!-- Status Pills -->
+    <div class="d-flex flex-wrap gap-1">
+      {% for s in ['', 'pending', 'confirmed', 'completed', 'cancelled'] %}
+        <a href="{{ url_for('appointments.list_appointments', status=s, doctor_id=selected_doctor or '') }}" 
+           class="btn btn-sm {{ 'btn-primary-brand' if status == s else 'btn-secondary-brand' }}">
+          {{ s|capitalize if s else "All Bookings" }}
+        </a>
+      {% endfor %}
+    </div>
+
+    <a href="{{ url_for('appointments.new_appointment') }}" class="btn-primary-brand">
+      <i class="bi bi-plus-circle"></i> Add Appointment
+    </a>
+  </div>
+
+  <!-- Search and Doctor Filter -->
+  <form method="get" class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <input type="hidden" name="status" value="{{ status }}">
+    <div class="input-group" style="width: 260px;">
+      <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+      <input class="form-control border-start-0 ps-0" name="q" value="{{ q }}" placeholder="Search patient, doctor, reason...">
+    </div>
+
+    <select class="form-select" name="doctor_id" style="width: 220px;" onchange="this.form.submit()">
+      <option value="">All Attending Doctors</option>
+      {% for d in doctors %}
+      <option value="{{ d.id }}" {{ "selected" if selected_doctor == d.id }}>{{ d.full_name }}</option>
+      {% endfor %}
+    </select>
+
+    <button class="btn btn-secondary-brand" type="submit"><i class="bi bi-search"></i> Search</button>
+    {% if q or selected_doctor %}
+    <a href="{{ url_for('appointments.list_appointments', status=status) }}" class="btn btn-sm btn-outline-secondary" title="Clear Filters"><i class="bi bi-x-lg"></i></a>
+    {% endif %}
+  </form>
+
+  <div class="table-responsive-clean">
+    <table class="table-clean">
+      <thead>
+        <tr>
+          <th>Patient Name</th>
+          <th>Doctor / Specialty</th>
+          <th>Department</th>
+          <th>Scheduled Slot</th>
+          <th>Status</th>
+          <th>Consultation Reason</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for a in appointments %}
+        <tr>
+          <td>
+            <a href="{{ url_for('patients.view_patient', patient_id=a.patient_id) }}" class="table-cell-title">
+              {{ a.patient_name }}
+            </a>
+          </td>
+          <td>
+            <div class="fw-medium text-dark">{{ a.doctor_name }}</div>
+          </td>
+          <td>
+            {% if a.department_name %}
+            <span class="badge bg-light text-dark border">{{ a.department_name }}</span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="small text-muted font-monospace">{{ a.scheduled_at }}</td>
+          <td><span class="badge-status badge-{{ a.status }}">{{ a.status }}</span></td>
+          <td class="small text-secondary" style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            {{ a.reason or "Routine Consultation" }}
+          </td>
+          <td class="text-end">
+            <div class="d-inline-flex align-items-center gap-1">
+              <!-- Reschedule / Update Link -->
+              <a href="{{ url_for('appointments.reschedule', appt_id=a.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Reschedule Date/Time">
+                <i class="bi bi-pencil-square"></i> Reschedule
+              </a>
+
+              <!-- Status Transitions -->
+              {% if a.status == 'pending' %}
+              <form method="post" action="{{ url_for('appointments.update_status', appt_id=a.id, new_status='confirmed') }}" class="d-inline">
+                {% include "_csrf.html" %}
+                <button class="btn btn-sm btn-outline-success py-0 px-2" type="submit" title="Confirm Appointment">
+                  <i class="bi bi-check-circle"></i> Confirm
+                </button>
+              </form>
+              {% endif %}
+
+              {% if a.status in ['pending', 'confirmed'] %}
+              <form method="post" action="{{ url_for('appointments.update_status', appt_id=a.id, new_status='completed') }}" class="d-inline">
+                {% include "_csrf.html" %}
+                <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="submit" title="Mark as Completed">
+                  <i class="bi bi-check2-all"></i> Done
+                </button>
+              </form>
+              <form method="post" action="{{ url_for('appointments.update_status', appt_id=a.id, new_status='cancelled') }}" class="d-inline" onsubmit="return confirm('Cancel this appointment?');">
+                {% include "_csrf.html" %}
+                <button class="btn btn-sm btn-outline-warning py-0 px-2" type="submit" title="Cancel Appointment">
+                  <i class="bi bi-x-circle"></i> Cancel
+                </button>
+              </form>
+              {% endif %}
+
+              {% if a.status in ['cancelled', 'completed'] %}
+              <form method="post" action="{{ url_for('appointments.delete_appointment', appt_id=a.id) }}" class="d-inline" onsubmit="return confirm('Remove this appointment record?');">
+                {% include "_csrf.html" %}
+                <button class="btn btn-sm btn-outline-danger py-0 px-2" type="submit" title="Delete Record">
+                  <i class="bi bi-trash"></i> Delete
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <div class="empty-state-icon"><i class="bi bi-calendar-x"></i></div>
+              <div class="empty-state-title">No appointments found</div>
+              <div class="empty-state-text">No consultation records match the selected status or filter.</div>
+              <a href="{{ url_for('appointments.new_appointment') }}" class="btn-primary-brand btn-sm">Schedule Appointment</a>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

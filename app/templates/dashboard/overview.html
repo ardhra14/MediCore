@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Overview — MediCore{% endblock %}
+{% block page_title %}Clinical Dashboard Overview{% endblock %}
+
+{% block content %}
+<!-- Metric Cards Row -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Total Patients</span>
+        <div class="stat-icon icon-teal"><i class="bi bi-people"></i></div>
+      </div>
+      <div class="stat-value">{{ stats.total_patients }}</div>
+      <div class="stat-subtext">Registered clinical records</div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Medical Specialists</span>
+        <div class="stat-icon icon-blue"><i class="bi bi-heart-pulse"></i></div>
+      </div>
+      <div class="stat-value">{{ stats.active_doctors }}</div>
+      <div class="stat-subtext">Active on hospital roster</div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Today's Visits</span>
+        <div class="stat-icon icon-indigo"><i class="bi bi-calendar2-day"></i></div>
+      </div>
+      <div class="stat-value">{{ stats.today_appointments }}</div>
+      <div class="stat-subtext">Scheduled consultations</div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Pending Confirmation</span>
+        <div class="stat-icon icon-amber"><i class="bi bi-clock"></i></div>
+      </div>
+      <div class="stat-value text-warning">{{ stats.pending_appointments }}</div>
+      <div class="stat-subtext">Awaiting triage/check-in</div>
+    </div>
+  </div>
+</div>
+
+<!-- Middle Section: Chart & Upcoming Appointments -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-5">
+    <div class="card-surface h-100">
+      <div class="card-header-flex">
+        <h6 class="card-header-title"><i class="bi bi-pie-chart text-teal"></i> Appointments by Status</h6>
+        <span class="badge bg-light text-muted border">Live Caseload</span>
+      </div>
+      <div style="max-height: 230px; position: relative;">
+        <canvas id="statusChart" height="210"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card-surface h-100">
+      <div class="card-header-flex">
+        <h6 class="card-header-title"><i class="bi bi-calendar2-week text-teal"></i> Upcoming Scheduled Visits</h6>
+        <a href="{{ url_for('appointments.list_appointments') }}" class="btn-secondary-brand py-1 px-2 text-xs">
+          View All <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+      <div class="table-responsive-clean">
+        <table class="table-clean">
+          <thead>
+            <tr>
+              <th>Patient</th>
+              <th>Doctor</th>
+              <th>Scheduled Time</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for a in upcoming %}
+            <tr>
+              <td class="table-cell-title">{{ a.patient_name }}</td>
+              <td>{{ a.doctor_name }}</td>
+              <td class="small text-muted">{{ a.scheduled_at }}</td>
+              <td><span class="badge-status badge-{{ a.status }}">{{ a.status }}</span></td>
+              <td>
+                <a href="{{ url_for('appointments.reschedule', appt_id=a.id) }}" class="btn-action-icon" title="Reschedule">
+                  <i class="bi bi-clock-history"></i>
+                </a>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-muted text-center py-3">No upcoming appointments scheduled.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Activity Log -->
+<div class="card-surface">
+  <div class="card-header-flex">
+    <h6 class="card-header-title"><i class="bi bi-activity text-teal"></i> Recent Clinic Activity &amp; Consultations</h6>
+    <a href="{{ url_for('appointments.new_appointment') }}" class="btn-primary-brand py-1 px-3 text-xs">
+      <i class="bi bi-plus-lg"></i> Schedule Visit
+    </a>
+  </div>
+  <div class="table-responsive-clean">
+    <table class="table-clean">
+      <thead>
+        <tr>
+          <th>Patient Name</th>
+          <th>Consultant Doctor</th>
+          <th>Appointment Slot</th>
+          <th>Consultation Reason</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for a in recent_appointments %}
+        <tr>
+          <td class="table-cell-title">{{ a.patient_name }}</td>
+          <td>{{ a.doctor_name }}</td>
+          <td class="small text-muted">{{ a.scheduled_at }}</td>
+          <td class="text-secondary">{{ a.reason or "Routine checkup" }}</td>
+          <td><span class="badge-status badge-{{ a.status }}">{{ a.status }}</span></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="text-muted text-center py-3">No activity recorded yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const ctx = document.getElementById('statusChart');
+    if (ctx) {
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: [{% for s in status_counts %}"{{ s.status|capitalize }}",{% endfor %}],
+          datasets: [{
+            data: [{% for s in status_counts %}{{ s.c }},{% endfor %}],
+            backgroundColor: ['#D97706', '#0D9488', '#0F172A', '#E11D48'],
+            borderWidth: 2,
+            borderColor: '#FFFFFF'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+          },
+          cutout: '70%'
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

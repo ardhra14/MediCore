@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Reschedule Appointment — MediCore{% endblock %}
+{% block page_title %}Reschedule Clinical Appointment{% endblock %}
+
+{% block content %}
+<div class="card-surface" style="max-width: 520px; margin: 0 auto;">
+  <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+    <div>
+      <h5 class="fw-bold text-dark mb-0">Reschedule Consultation</h5>
+      <span class="text-muted small">Update Appointment Slot</span>
+    </div>
+    <span class="badge bg-light text-muted border">ID: #APT-{{ "%04d"|format(appt.id) }}</span>
+  </div>
+
+  <div class="p-3 bg-light rounded border mb-4">
+    <div class="d-flex justify-content-between small text-muted mb-1">
+      <span>Patient:</span>
+      <strong class="text-dark">{{ appt.patient_name }}</strong>
+    </div>
+    <div class="d-flex justify-content-between small text-muted mb-1">
+      <span>Specialist:</span>
+      <span class="text-dark">{{ appt.doctor_name }}</span>
+    </div>
+    <div class="d-flex justify-content-between small text-muted">
+      <span>Current Slot:</span>
+      <span class="font-monospace text-dark">{{ appt.scheduled_at }}</span>
+    </div>
+  </div>
+
+  <form method="post">
+    {% include "_csrf.html" %}
+    <div class="mb-4">
+      <label class="form-label">New Date &amp; Time Slot <span class="text-danger">*</span></label>
+      <input class="form-control" type="datetime-local" name="scheduled_at" value="{{ appt.scheduled_at }}" required>
+      <div class="form-text">Rescheduling will mark the appointment as pending confirmation.</div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center pt-2">
+      <a href="{{ url_for('appointments.list_appointments') }}" class="btn-secondary-brand">
+        <i class="bi bi-x-circle"></i> Cancel
+      </a>
+      <button class="btn-primary-brand" type="submit">
+        <i class="bi bi-pencil-square"></i> Update Appointment
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

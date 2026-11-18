@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit Staff Member" if staff else "Add Staff Member" }} — MediCore{% endblock %}
+{% block page_title %}{{ "Edit Staff Details" if staff else "Add Staff Member" }}{% endblock %}
+
+{% block content %}
+<div class="card-surface" style="max-width: 580px; margin: 0 auto;">
+  <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+    <div>
+      <h5 class="fw-bold text-dark mb-0">{{ "Update Staff Profile" if staff else "Staff Member Onboarding" }}</h5>
+      <span class="text-muted small">Administration &amp; Support Credentialing</span>
+    </div>
+    {% if staff %}
+    <span class="badge bg-light text-muted border">Staff ID: #STF-{{ "%04d"|format(staff.id) }}</span>
+    {% endif %}
+  </div>
+
+  <form method="post">
+    {% include "_csrf.html" %}
+    <div class="mb-3">
+      <label class="form-label">Full Name <span class="text-danger">*</span></label>
+      <input class="form-control" name="full_name" value="{{ staff.full_name if staff else '' }}" required placeholder="e.g. Sneha Menachery">
+    </div>
+
+    {% if not staff %}
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Email Address <span class="text-danger">*</span></label>
+        <input class="form-control" type="email" name="email" required placeholder="s.menachery@medicore.test">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Temporary Password <span class="text-danger">*</span></label>
+        <input class="form-control" type="password" name="password" minlength="8" required placeholder="Minimum 8 characters">
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Job Title / Designation</label>
+        <input class="form-control" name="job_title" value="{{ staff.job_title if staff else '' }}" placeholder="e.g. Front Desk Coordinator">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Department</label>
+        <select class="form-select" name="department_id">
+          <option value="">— Select Department —</option>
+          {% for dep in departments %}
+          <option value="{{ dep.id }}" {{ "selected" if staff and staff.department_id == dep.id }}>{{ dep.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">Phone Contact</label>
+      <input class="form-control" name="phone" value="{{ staff.phone if staff else '' }}" placeholder="+91 94470 00000">
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center pt-2">
+      <a href="{{ url_for('staff.list_staff') }}" class="btn-secondary-brand">
+        <i class="bi bi-x-circle"></i> Cancel
+      </a>
+      <button class="btn-primary-brand" type="submit">
+        {% if staff %}
+          <i class="bi bi-pencil-square"></i> Update Staff Profile
+        {% else %}
+          <i class="bi bi-plus-circle"></i> Add Staff Member
+        {% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

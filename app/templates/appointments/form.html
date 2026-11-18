@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Schedule Appointment — MediCore{% endblock %}
+{% block page_title %}Schedule Clinical Appointment{% endblock %}
+
+{% block content %}
+<div class="card-surface" style="max-width: 600px; margin: 0 auto;">
+  <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+    <div>
+      <h5 class="fw-bold text-dark mb-0">Book Patient Consultation</h5>
+      <span class="text-muted small">Outpatient Department Scheduling</span>
+    </div>
+    <span class="badge bg-light text-muted border">Status: Pending</span>
+  </div>
+
+  <form method="post">
+    {% include "_csrf.html" %}
+    <div class="mb-3">
+      <label class="form-label">Patient Name <span class="text-danger">*</span></label>
+      <select class="form-select" name="patient_id" required>
+        <option value="">— Select Patient —</option>
+        {% for p in patients %}
+        <option value="{{ p.id }}" {{ "selected" if pre_patient_id == p.id }}>{{ p.full_name }} ({{ p.phone or "No phone" }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Consulting Doctor <span class="text-danger">*</span></label>
+        <select class="form-select" name="doctor_id" required>
+          <option value="">— Select Specialist —</option>
+          {% for d in doctors %}
+          <option value="{{ d.id }}" {{ "selected" if pre_doctor_id == d.id }}>{{ d.full_name }} ({{ d.department_name or "General" }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Department</label>
+        <select class="form-select" name="department_id">
+          <option value="">— Auto-match with Doctor —</option>
+          {% for dep in departments %}
+          <option value="{{ dep.id }}">{{ dep.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Appointment Date &amp; Time Slot <span class="text-danger">*</span></label>
+      <input class="form-control" type="datetime-local" name="scheduled_at" required>
+      <div class="form-text">Choose an available slot matching the doctor's weekly OPD schedule.</div>
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">Chief Complaint / Reason for Visit</label>
+      <textarea class="form-control" name="reason" rows="2" placeholder="e.g. Follow-up ECG evaluation, knee joint pain, routine pediatric wellness"></textarea>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center pt-2">
+      <a href="{{ url_for('appointments.list_appointments') }}" class="btn-secondary-brand">
+        <i class="bi bi-x-circle"></i> Cancel
+      </a>
+      <button class="btn-primary-brand" type="submit">
+        <i class="bi bi-plus-circle"></i> Add Appointment
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

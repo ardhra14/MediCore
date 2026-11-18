@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit Patient Details" if patient else "Register New Patient" }} — MediCore{% endblock %}
+{% block page_title %}{{ "Edit Patient Profile" if patient else "Register New Patient" }}{% endblock %}
+
+{% block content %}
+<div class="card-surface" style="max-width: 640px; margin: 0 auto;">
+  <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+    <div>
+      <h5 class="fw-bold text-dark mb-0">{{ "Update Patient Details" if patient else "New Patient Registration" }}</h5>
+      <span class="text-muted small">Electronic Health Record Intake Form</span>
+    </div>
+    {% if patient %}
+    <span class="badge bg-light text-muted border">ID: #PT-{{ "%04d"|format(patient.id) }}</span>
+    {% endif %}
+  </div>
+
+  <form method="post">
+    {% include "_csrf.html" %}
+    <div class="mb-3">
+      <label class="form-label">Full Name <span class="text-danger">*</span></label>
+      <input class="form-control" name="full_name" value="{{ patient.full_name if patient else '' }}" required placeholder="e.g. Eldho Paulose">
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Date of Birth</label>
+        <input class="form-control" type="date" name="date_of_birth" value="{{ patient.date_of_birth if patient else '' }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Gender</label>
+        <select class="form-select" name="gender">
+          <option value="">Select Gender</option>
+          {% for g in ["Male","Female","Other"] %}
+          <option value="{{ g }}" {{ "selected" if patient and patient.gender == g }}>{{ g }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Contact Phone</label>
+        <input class="form-control" name="phone" value="{{ patient.phone if patient else '' }}" placeholder="+91 98470 12345">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Blood Group</label>
+        <select class="form-select" name="blood_group">
+          <option value="">Select Blood Group</option>
+          {% for b in ["A+","A-","B+","B-","O+","O-","AB+","AB-"] %}
+          <option value="{{ b }}" {{ "selected" if patient and patient.blood_group == b }}>{{ b }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">Residential Address</label>
+      <textarea class="form-control" name="address" rows="2" placeholder="Street, Locality, City, Kerala, PIN">{{ patient.address if patient else '' }}</textarea>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center pt-2">
+      <a href="{{ url_for('patients.view_patient', patient_id=patient.id) if patient else url_for('patients.list_patients') }}" class="btn-secondary-brand">
+        <i class="bi bi-x-circle"></i> Cancel
+      </a>
+      <button class="btn-primary-brand" type="submit">
+        {% if patient %}
+          <i class="bi bi-pencil-square"></i> Update Patient
+        {% else %}
+          <i class="bi bi-plus-circle"></i> Add Patient
+        {% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

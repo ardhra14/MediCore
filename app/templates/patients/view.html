@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}{{ patient.full_name }} — MediCore{% endblock %}
+{% block page_title %}Patient Comprehensive Profile{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Left Column: Patient Profile & Quick Operations -->
+  <div class="col-lg-4">
+    <div class="card-surface mb-4">
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="user-avatar-sm" style="width: 48px; height: 48px; font-size: 1.15rem; background: var(--teal-50); color: var(--teal-700); border-color: var(--teal-100);">
+          {{ patient.full_name[:2]|upper }}
+        </div>
+        <div>
+          <h5 class="fw-bold mb-0 text-dark">{{ patient.full_name }}</h5>
+          <span class="text-muted small">Medical Record #PT-{{ "%04d"|format(patient.id) }}</span>
+        </div>
+      </div>
+
+      <ul class="list-group list-group-flush small mb-3">
+        <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+          <span class="text-muted">Date of Birth:</span>
+          <strong>{{ patient.date_of_birth or "—" }}</strong>
+        </li>
+        <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+          <span class="text-muted">Gender:</span>
+          <span>{{ patient.gender or "—" }}</span>
+        </li>
+        <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+          <span class="text-muted">Blood Group:</span>
+          {% if patient.blood_group %}
+          <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2">{{ patient.blood_group }}</span>
+          {% else %}
+          <span>—</span>
+          {% endif %}
+        </li>
+        <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+          <span class="text-muted">Contact Phone:</span>
+          <span class="font-monospace">{{ patient.phone or "—" }}</span>
+        </li>
+        <li class="list-group-item px-0 py-2">
+          <div class="text-muted mb-1">Residential Address:</div>
+          <div class="text-dark fw-medium">{{ patient.address or "—" }}</div>
+        </li>
+      </ul>
+
+      <!-- Action Buttons -->
+      <div class="d-grid gap-2">
+        {% if current_user.role in ['admin','receptionist'] %}
+        <a href="{{ url_for('patients.edit_patient', patient_id=patient.id) }}" class="btn btn-outline-primary justify-content-center">
+          <i class="bi bi-pencil-square"></i> Update Patient Details
+        </a>
+        {% endif %}
+
+        {% if current_user.role == 'admin' %}
+        <form method="post" action="{{ url_for('patients.delete_patient', patient_id=patient.id) }}" onsubmit="return confirm('Permanently delete patient record and all related medical history?');">
+          {% include "_csrf.html" %}
+          <button class="btn btn-outline-danger btn-sm w-100" type="submit">
+            <i class="bi bi-trash"></i> Delete Patient File
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Quick Clinical Operations Card -->
+    <div class="card-surface">
+      <h6 class="card-header-title mb-3"><i class="bi bi-lightning-charge text-teal"></i> Direct Clinical Actions</h6>
+      <div class="d-grid gap-2">
+        <a href="{{ url_for('appointments.new_appointment', patient_id=patient.id) }}" class="btn-primary-brand justify-content-center">
+          <i class="bi bi-calendar2-plus"></i> Schedule Appointment
+        </a>
+
+        {% if current_user.role in ['admin','doctor'] %}
+        <a href="{{ url_for('records.new_record', patient_id=patient.id) }}" class="btn btn-secondary-brand justify-content-center">
+          <i class="bi bi-file-earmark-medical"></i> Add Medical Record
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Longitudinal Patient History -->
+  <div class="col-lg-8">
+    <!-- Appointments Timeline -->
+    <div class="card-surface mb-4">
+      <div class="card-header-flex">
+        <h6 class="card-header-title"><i class="bi bi-calendar2-check text-teal"></i> Appointments &amp; Consultations</h6>
+        <a href="{{ url_for('appointments.new_appointment', patient_id=patient.id) }}" class="btn-secondary-brand py-1 px-2 text-xs">
+          <i class="bi bi-plus-lg"></i> Book New
+        </a>
+      </div>
+      <div class="table-responsive-clean">
+        <table class="table-clean">
+          <thead>
+            <tr>
+              <th>Doctor / Specialty</th>
+              <th>Date &amp; Time</th>
+              <th>Status</th>
+              <th>Reason</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for a in appointments %}
+            <tr>
+              <td>
+                <div class="table-cell-title">{{ a.doctor_name }}</div>
+                <div class="table-cell-sub">{{ a.department_name or "Consultant" }}</div>
+              </td>
+              <td class="small text-muted">{{ a.scheduled_at }}</td>
+              <td><span class="badge-status badge-{{ a.status }}">{{ a.status }}</span></td>
+              <td class="small text-secondary">{{ a.reason or "—" }}</td>
+              <td>
+                <a href="{{ url_for('appointments.reschedule', appt_id=a.id) }}" class="btn-action-icon" title="Reschedule">
+                  <i class="bi bi-clock-history"></i>
+                </a>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-muted text-center py-3">No consultations recorded for this patient.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Medical & Diagnosis Records -->
+    <div class="card-surface mb-4">
+      <div class="card-header-flex">
+        <h6 class="card-header-title"><i class="bi bi-clipboard2-pulse text-teal"></i> Medical &amp; Diagnostic History</h6>
+        {% if current_user.role in ['admin','doctor'] %}
+        <a href="{{ url_for('records.new_record', patient_id=patient.id) }}" class="btn-secondary-brand py-1 px-2 text-xs">
+          <i class="bi bi-plus-lg"></i> Add Record
+        </a>
+        {% endif %}
+      </div>
+      <div class="table-responsive-clean">
+        <table class="table-clean">
+          <thead>
+            <tr>
+              <th>Visit Date</th>
+              <th>Doctor</th>
+              <th>Diagnosis</th>
+              <th>Prescription</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for r in records %}
+            <tr>
+              <td class="small text-muted">{{ r.visit_date }}</td>
+              <td>{{ r.doctor_name or "—" }}</td>
+              <td class="table-cell-title">{{ r.diagnosis or "Clinical checkup" }}</td>
+              <td class="small text-muted font-monospace" style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {{ r.prescription or "—" }}
+              </td>
+              <td>
+                {% if current_user.role in ['admin','doctor'] %}
+                <a href="{{ url_for('records.view_record', record_id=r.id) }}" class="btn-action-icon" title="View Full Clinical Chart">
+                  <i class="bi bi-file-earmark-text"></i>
+                </a>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-muted text-center py-3">No clinical medical records recorded yet.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

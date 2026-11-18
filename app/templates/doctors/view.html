@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}{{ doctor.full_name }} — MediCore{% endblock %}
+{% block page_title %}Specialist Physician Profile{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-4">
+    <!-- Doctor Summary Card -->
+    <div class="card-surface mb-4">
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="user-avatar-sm" style="width: 52px; height: 52px; font-size: 1.25rem; background: var(--teal-50); color: var(--teal-700); border-color: var(--teal-100);">
+          {{ doctor.full_name[:2]|upper }}
+        </div>
+        <div>
+          <h5 class="fw-bold mb-0 text-dark">{{ doctor.full_name }}</h5>
+          <span class="text-teal fw-medium small">{{ doctor.specialty or "Specialist Physician" }}</span>
+        </div>
+      </div>
+
+      <ul class="list-group list-group-flush small mb-4">
+        <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+          <span class="text-muted">Department:</span>
+          <strong>{{ doctor.department_name or "General Medicine" }}</strong>
+        </li>
+        <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+          <span class="text-muted">Email:</span>
+          <span>{{ doctor.email }}</span>
+        </li>
+        <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+          <span class="text-muted">Contact Phone:</span>
+          <span class="font-monospace">{{ doctor.phone or "—" }}</span>
+        </li>
+        <li class="list-group-item px-0 py-2">
+          <div class="text-muted mb-1">OPD Clinic Hours:</div>
+          <div class="text-dark fw-medium"><i class="bi bi-clock me-1 text-teal"></i> {{ doctor.availability or "By appointment" }}</div>
+        </li>
+      </ul>
+
+      <div class="d-grid gap-2">
+        <a href="{{ url_for('appointments.new_appointment', doctor_id=doctor.id) }}" class="btn-primary-brand justify-content-center">
+          <i class="bi bi-calendar2-plus"></i> Book Consultation
+        </a>
+
+        {% if current_user.role == 'admin' %}
+        <a href="{{ url_for('doctors.edit_doctor', doctor_id=doctor.id) }}" class="btn btn-outline-primary justify-content-center">
+          <i class="bi bi-pencil-square"></i> Update Doctor Details
+        </a>
+        <form method="post" action="{{ url_for('doctors.delete_doctor', doctor_id=doctor.id) }}" onsubmit="return confirm('Remove Dr. {{ doctor.full_name }} from the hospital system?');">
+          {% include "_csrf.html" %}
+          <button class="btn btn-outline-danger btn-sm w-100" type="submit">
+            <i class="bi bi-trash"></i> Delete Doctor Record
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Consultations and Caseload -->
+  <div class="col-lg-8">
+    <div class="card-surface">
+      <div class="card-header-flex">
+        <h6 class="card-header-title"><i class="bi bi-calendar2-week text-teal"></i> Scheduled Consultations for {{ doctor.full_name }}</h6>
+        <span class="badge bg-light text-muted border">{{ appointments|length }} Bookings</span>
+      </div>
+
+      <div class="table-responsive-clean">
+        <table class="table-clean">
+          <thead>
+            <tr>
+              <th>Patient</th>
+              <th>Appointment Slot</th>
+              <th>Status</th>
+              <th>Reason</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for a in appointments %}
+            <tr>
+              <td class="table-cell-title">{{ a.patient_name }}</td>
+              <td class="small text-muted">{{ a.scheduled_at }}</td>
+              <td><span class="badge-status badge-{{ a.status }}">{{ a.status }}</span></td>
+              <td class="small text-secondary">{{ a.reason or "—" }}</td>
+              <td>
+                <a href="{{ url_for('appointments.reschedule', appt_id=a.id) }}" class="btn-action-icon" title="Reschedule">
+                  <i class="bi bi-clock-history"></i>
+                </a>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-muted text-center py-3">No consultations scheduled for this doctor.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

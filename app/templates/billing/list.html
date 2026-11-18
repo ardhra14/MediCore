@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Invoices — MediCore{% endblock %}
+{% block page_title %}Billing &amp; Invoices{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h5 class="mb-0">Patient Invoices</h5>
+    <div class="text-muted small">Persisted billing records from the database.</div>
+  </div>
+  <a href="{{ url_for('billing.new_invoice') }}" class="btn btn-primary-brand btn-sm"><i class="bi bi-plus-lg"></i> New Invoice</a>
+</div>
+<div class="card-surface">
+  <div class="table-responsive-clean">
+    <table class="table-clean">
+      <thead><tr><th>Invoice</th><th>Patient</th><th>Amount</th><th>Status</th><th>Issued</th><th></th></tr></thead>
+      <tbody>
+      {% for invoice in invoices %}
+        <tr>
+          <td>#{{ invoice.id }}</td>
+          <td class="table-cell-title">{{ invoice.patient_name }}</td>
+          <td>Rs. {{ "{:,.2f}".format(invoice.amount) }}</td>
+          <td><span class="badge-status badge-{{ 'confirmed' if invoice.status == 'paid' else 'pending' }}">{{ invoice.status }}</span></td>
+          <td class="small text-muted">{{ invoice.issued_at[:16] }}</td>
+          <td><a href="{{ url_for('billing.view_invoice', invoice_id=invoice.id) }}" class="btn-action-icon" title="View Invoice"><i class="bi bi-receipt"></i></a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="text-center text-muted py-3">No invoices recorded.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

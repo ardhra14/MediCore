@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Settings &amp; Account — MediCore{% endblock %}
+{% block page_title %}Account &amp; System Settings{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <!-- Profile Information Card -->
+    <div class="card-surface mb-4">
+      <div class="card-header-flex">
+        <h6 class="card-header-title"><i class="bi bi-person-gear text-teal"></i> Personal Profile</h6>
+        <span class="role-pill role-{{ user.role }}">{{ user.role }}</span>
+      </div>
+      <form method="post" action="{{ url_for('settings.update_profile') }}">
+        {% include "_csrf.html" %}
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label">Full Name</label>
+            <input class="form-control" name="full_name" value="{{ user.full_name }}" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email Address</label>
+            <input class="form-control bg-light" value="{{ user.email }}" readonly>
+            <div class="form-text">System login ID managed by administrator.</div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label">Phone Number</label>
+            <input class="form-control" name="phone" value="{{ profile_extra.phone if profile_extra and profile_extra.phone else '' }}" placeholder="+91 98470 00000">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Location / Address</label>
+            <input class="form-control" name="address" value="{{ profile_extra.address if profile_extra and profile_extra.address else '' }}" placeholder="City, Kerala, India">
+          </div>
+        </div>
+
+        {% if profile_extra and profile_extra.department_name %}
+        <div class="mb-3">
+          <label class="form-label">Department Assignment</label>
+          <input class="form-control bg-light" value="{{ profile_extra.department_name }} ({{ profile_extra.specialty or profile_extra.job_title }})" readonly>
+        </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-end">
+          <button class="btn-primary-brand" type="submit">
+            <i class="bi bi-check-lg"></i> Update Profile Details
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Security & Password Card -->
+    <div class="card-surface">
+      <div class="card-header-flex">
+        <h6 class="card-header-title"><i class="bi bi-shield-lock text-teal"></i> Security &amp; Credentials</h6>
+        <span class="badge bg-light text-muted border">PBKDF2-SHA256</span>
+      </div>
+      <form method="post" action="{{ url_for('settings.update_password') }}">
+        {% include "_csrf.html" %}
+        <div class="mb-3">
+          <label class="form-label">Current Password</label>
+          <input class="form-control" type="password" name="current_password" required placeholder="Enter current password">
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label">New Password</label>
+            <input class="form-control" type="password" name="new_password" minlength="8" required placeholder="Minimum 8 characters">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Confirm New Password</label>
+            <input class="form-control" type="password" name="confirm_password" minlength="8" required placeholder="Repeat new password">
+          </div>
+        </div>
+        <div class="d-flex justify-content-end">
+          <button class="btn-primary-brand" type="submit">
+            <i class="bi bi-key"></i> Change Password
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <!-- Active Sessions Card -->
+    <div class="card-surface mb-4">
+      <div class="card-header-flex">
+        <h6 class="card-header-title"><i class="bi bi-clock-history text-teal"></i> Active Sessions</h6>
+        <form method="post" action="{{ url_for('settings.revoke_others') }}" onsubmit="return confirm('Sign out all other devices and browser sessions?');">
+          {% include "_csrf.html" %}
+          <button class="btn btn-sm btn-outline-danger" type="submit">Revoke Others</button>
+        </form>
+      </div>
+      <p class="small text-muted mb-3">Cryptographically secured session tokens issued by MediCore CSPRNG.</p>
+      <div class="table-responsive-clean">
+        <table class="table-clean" style="font-size: 0.8rem;">
+          <thead>
+            <tr>
+              <th>Session Token</th>
+              <th>Status</th>
+              <th>Expires</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for s in active_sessions %}
+            <tr>
+              <td><code>{{ s.id[:8] }}...{{ s.id[-4:] }}</code></td>
+              <td><span class="badge-status badge-confirmed">Active</span></td>
+              <td class="text-muted" style="font-size: 0.72rem;">{{ s.expires_at[:16] }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="3" class="text-muted text-center py-2">No active sessions tracked.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Facility & Lab Information -->
+    <div class="card-surface">
+      <div class="card-header-flex">
+        <h6 class="card-header-title"><i class="bi bi-hospital text-teal"></i> Hospital Instance Info</h6>
+      </div>
+      <ul class="list-group list-group-flush small">
+        <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+          <span class="text-muted">Facility:</span>
+          <strong>MediCore Health Institute</strong>
+        </li>
+        <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+          <span class="text-muted">Regional Center:</span>
+          <span>Kochi, Kerala, India</span>
+        </li>
+        <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+          <span class="text-muted">Timezone:</span>
+          <span>Asia/Kolkata (IST, UTC+05:30)</span>
+        </li>
+        <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+          <span class="text-muted">Security Lab Module:</span>
+          {% if security_lab_enabled %}
+          <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Mounted (Localhost Only)</span>
+          {% else %}
+          <span class="badge bg-secondary-subtle text-secondary">Disabled</span>
+          {% endif %}
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

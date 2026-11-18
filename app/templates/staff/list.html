@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Hospital Staff Directory — MediCore{% endblock %}
+{% block page_title %}Administrative &amp; Clinical Staff Directory{% endblock %}
+
+{% block content %}
+<div class="card-surface">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <form method="get" class="d-flex flex-wrap align-items-center gap-2" style="max-width: 540px;">
+      <div class="input-group" style="width: 240px;">
+        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+        <input class="form-control border-start-0 ps-0" name="q" value="{{ q }}" placeholder="Search staff or title...">
+      </div>
+
+      <select class="form-select" name="department_id" style="width: 180px;">
+        <option value="">All Departments</option>
+        {% for dep in departments %}
+        <option value="{{ dep.id }}" {{ "selected" if selected_department == dep.id }}>{{ dep.name }}</option>
+        {% endfor %}
+      </select>
+
+      <button class="btn btn-secondary-brand" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+      {% if q or selected_department %}
+      <a href="{{ url_for('staff.list_staff') }}" class="btn btn-sm btn-outline-secondary" title="Reset Filters"><i class="bi bi-x-lg"></i></a>
+      {% endif %}
+    </form>
+
+    <a href="{{ url_for('staff.new_staff') }}" class="btn-primary-brand">
+      <i class="bi bi-plus-circle"></i> Add Staff
+    </a>
+  </div>
+
+  <div class="table-responsive-clean">
+    <table class="table-clean">
+      <thead>
+        <tr>
+          <th>Staff Member</th>
+          <th>Official Email</th>
+          <th>Job Title / Role</th>
+          <th>Department</th>
+          <th>Phone Contact</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for s in staff %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="user-avatar-sm" style="background: var(--cyan-50); color: var(--cyan-600); border-color: var(--cyan-100);">
+                {{ s.full_name[:2]|upper }}
+              </div>
+              <div class="table-cell-title">{{ s.full_name }}</div>
+            </div>
+          </td>
+          <td class="small text-muted">{{ s.email }}</td>
+          <td><span class="badge bg-light text-dark border">{{ s.job_title or "Staff" }}</span></td>
+          <td>
+            {% if s.department_name %}
+            <span class="badge bg-light text-muted border">{{ s.department_name }}</span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="font-monospace small">{{ s.phone or "—" }}</td>
+          <td class="text-end">
+            <div class="d-inline-flex gap-1">
+              <a href="{{ url_for('staff.edit_staff', staff_id=s.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Update Staff Profile">
+                <i class="bi bi-pencil-square"></i> Update
+              </a>
+              <form method="post" action="{{ url_for('staff.delete_staff', staff_id=s.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to remove staff member {{ s.full_name }}?');">
+                {% include "_csrf.html" %}
+                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Delete Staff Member">
+                  <i class="bi bi-trash"></i> Delete
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <div class="empty-state-icon"><i class="bi bi-person-badge"></i></div>
+              <div class="empty-state-title">No staff members found</div>
+              <div class="empty-state-text">No administrative or support personnel match the selected criteria.</div>
+              <a href="{{ url_for('staff.new_staff') }}" class="btn-primary-brand btn-sm">Add Staff Member</a>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

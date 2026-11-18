@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Medical Records — MediCore{% endblock %}
+{% block page_title %}Electronic Health &amp; Medical Records{% endblock %}
+
+{% block content %}
+<div class="card-surface">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <form method="get" class="d-flex align-items-center gap-2" style="max-width: 440px;">
+      <div class="input-group">
+        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+        <input class="form-control border-start-0 ps-0" name="q" value="{{ q }}" placeholder="Search patient, diagnosis, medicine...">
+      </div>
+      <button class="btn btn-secondary-brand" type="submit"><i class="bi bi-search"></i> Search</button>
+      {% if q %}
+      <a href="{{ url_for('records.list_records') }}" class="btn btn-sm btn-outline-secondary" title="Clear Search"><i class="bi bi-x-lg"></i></a>
+      {% endif %}
+    </form>
+
+    <a href="{{ url_for('records.new_record') }}" class="btn-primary-brand">
+      <i class="bi bi-plus-circle"></i> Add Medical Record
+    </a>
+  </div>
+
+  <div class="table-responsive-clean">
+    <table class="table-clean">
+      <thead>
+        <tr>
+          <th>Visit Date</th>
+          <th>Patient Name</th>
+          <th>Attending Doctor</th>
+          <th>Department</th>
+          <th>Clinical Diagnosis</th>
+          <th>Prescription</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in records %}
+        <tr>
+          <td class="small text-muted font-monospace">{{ r.visit_date }}</td>
+          <td>
+            <a href="{{ url_for('patients.view_patient', patient_id=r.patient_id) }}" class="table-cell-title">
+              {{ r.patient_name }}
+            </a>
+          </td>
+          <td class="fw-medium text-dark">{{ r.doctor_name or "—" }}</td>
+          <td>
+            {% if r.department_name %}
+            <span class="badge bg-light text-muted border">{{ r.department_name }}</span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="table-cell-title">{{ r.diagnosis or "Clinical examination" }}</td>
+          <td class="small text-muted font-monospace" style="max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            {{ r.prescription or "—" }}
+          </td>
+          <td class="text-end">
+            <div class="d-inline-flex gap-1">
+              <a href="{{ url_for('records.view_record', record_id=r.id) }}" class="btn btn-sm btn-outline-secondary py-0 px-2" title="View Full Chart & Print">
+                <i class="bi bi-eye"></i> View
+              </a>
+              {% if current_user.role in ['admin', 'doctor'] %}
+              <a href="{{ url_for('records.edit_record', record_id=r.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Update Medical Record">
+                <i class="bi bi-pencil-square"></i> Update
+              </a>
+              <form method="post" action="{{ url_for('records.delete_record', record_id=r.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this clinical record?');">
+                {% include "_csrf.html" %}
+                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Delete Record">
+                  <i class="bi bi-trash"></i> Delete
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <div class="empty-state-icon"><i class="bi bi-file-earmark-medical"></i></div>
+              <div class="empty-state-title">No medical records found</div>
+              <div class="empty-state-text">No clinical documentation matches the current search query.</div>
+              <a href="{{ url_for('records.new_record') }}" class="btn-primary-brand btn-sm">Create Medical Record</a>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

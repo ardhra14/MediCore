@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit Doctor" if doctor else "Add New Doctor" }} — MediCore{% endblock %}
+{% block page_title %}{{ "Edit Specialist Profile" if doctor else "Add Medical Specialist" }}{% endblock %}
+
+{% block content %}
+<div class="card-surface" style="max-width: 620px; margin: 0 auto;">
+  <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+    <div>
+      <h5 class="fw-bold text-dark mb-0">{{ "Update Specialist Details" if doctor else "Specialist Onboarding" }}</h5>
+      <span class="text-muted small">Medical Staff Credentialing</span>
+    </div>
+    {% if doctor %}
+    <span class="badge bg-light text-muted border">Doctor ID: #DOC-{{ "%04d"|format(doctor.id) }}</span>
+    {% endif %}
+  </div>
+
+  <form method="post">
+    {% include "_csrf.html" %}
+    <div class="mb-3">
+      <label class="form-label">Doctor Full Name <span class="text-danger">*</span></label>
+      <input class="form-control" name="full_name" value="{{ doctor.full_name if doctor else '' }}" required placeholder="e.g. Dr. Harikrishnan Nair">
+    </div>
+
+    {% if not doctor %}
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Official Email <span class="text-danger">*</span></label>
+        <input class="form-control" type="email" name="email" required placeholder="h.nair@medicore.test">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Temporary Password <span class="text-danger">*</span></label>
+        <input class="form-control" type="password" name="password" minlength="8" required placeholder="Minimum 8 characters">
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Clinical Department</label>
+        <select class="form-select" name="department_id">
+          <option value="">— Select Department —</option>
+          {% for dep in departments %}
+          <option value="{{ dep.id }}" {{ "selected" if doctor and doctor.department_id == dep.id }}>{{ dep.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Medical Specialty</label>
+        <input class="form-control" name="specialty" value="{{ doctor.specialty if doctor else '' }}" placeholder="e.g. Interventional Cardiology">
+      </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Phone Contact</label>
+        <input class="form-control" name="phone" value="{{ doctor.phone if doctor else '' }}" placeholder="+91 94470 00000">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">OPD Availability Schedule</label>
+        <input class="form-control" name="availability" value="{{ doctor.availability if doctor else '' }}" placeholder="e.g. Mon-Fri 09:00 - 16:00">
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center pt-2">
+      <a href="{{ url_for('doctors.view_doctor', doctor_id=doctor.id) if doctor else url_for('doctors.list_doctors') }}" class="btn-secondary-brand">
+        <i class="bi bi-x-circle"></i> Cancel
+      </a>
+      <button class="btn-primary-brand" type="submit">
+        {% if doctor %}
+          <i class="bi bi-pencil-square"></i> Update Doctor
+        {% else %}
+          <i class="bi bi-plus-circle"></i> Add Doctor
+        {% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

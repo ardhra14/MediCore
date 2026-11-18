@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit Department" if department else "New Department" }} — MediCore{% endblock %}
+{% block page_title %}{{ "Edit Department" if department else "Create Department" }}{% endblock %}
+
+{% block content %}
+<div class="card-surface" style="max-width: 520px; margin: 0 auto;">
+  <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+    <div>
+      <h5 class="fw-bold text-dark mb-0">{{ "Update Department" if department else "Add Clinical Department" }}</h5>
+      <span class="text-muted small">Hospital Department Configuration</span>
+    </div>
+    {% if department %}
+    <span class="badge bg-light text-muted border">ID: #DEP-{{ "%02d"|format(department.id) }}</span>
+    {% endif %}
+  </div>
+
+  <form method="post">
+    {% include "_csrf.html" %}
+    <div class="mb-3">
+      <label class="form-label">Department Name <span class="text-danger">*</span></label>
+      <input class="form-control" name="name" value="{{ department.name if department else '' }}" required placeholder="e.g. Cardiology, Pediatrics, Orthopedics">
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">Clinical Scope &amp; Description</label>
+      <textarea class="form-control" name="description" rows="3" placeholder="Describe clinical specialty, medical services, facilities, or treatments offered">{{ department.description if department else '' }}</textarea>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center pt-2">
+      <a href="{{ url_for('departments.list_departments') }}" class="btn-secondary-brand">
+        <i class="bi bi-x-circle"></i> Cancel
+      </a>
+      <button class="btn-primary-brand" type="submit">
+        {% if department %}
+          <i class="bi bi-pencil-square"></i> Update Department
+        {% else %}
+          <i class="bi bi-plus-circle"></i> Add Department
+        {% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

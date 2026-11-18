@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Patients Registry — MediCore{% endblock %}
+{% block page_title %}Patient Directory &amp; Registry{% endblock %}
+
+{% block content %}
+<div class="card-surface">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <form method="get" class="d-flex flex-wrap align-items-center gap-2" style="max-width: 680px;">
+      <div class="input-group" style="width: 260px;">
+        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+        <input class="form-control border-start-0 ps-0" name="q" value="{{ q }}" placeholder="Search name, phone, city...">
+      </div>
+
+      <select class="form-select" name="blood" style="width: 140px;">
+        <option value="">Blood Group</option>
+        {% for b in ["A+","A-","B+","B-","O+","O-","AB+","AB-"] %}
+        <option value="{{ b }}" {{ "selected" if blood == b }}>{{ b }}</option>
+        {% endfor %}
+      </select>
+
+      <select class="form-select" name="gender" style="width: 120px;">
+        <option value="">Gender</option>
+        {% for g in ["Male","Female","Other"] %}
+        <option value="{{ g }}" {{ "selected" if gender == g }}>{{ g }}</option>
+        {% endfor %}
+      </select>
+
+      <button class="btn btn-secondary-brand" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+      {% if q or blood or gender %}
+      <a href="{{ url_for('patients.list_patients') }}" class="btn btn-sm btn-outline-secondary" title="Reset Filters"><i class="bi bi-x-lg"></i></a>
+      {% endif %}
+    </form>
+
+    {% if current_user.role in ['admin','receptionist'] %}
+    <a href="{{ url_for('patients.new_patient') }}" class="btn-primary-brand">
+      <i class="bi bi-plus-circle"></i> Add Patient
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="table-responsive-clean">
+    <table class="table-clean">
+      <thead>
+        <tr>
+          <th>Patient Name</th>
+          <th>DOB / Age</th>
+          <th>Gender</th>
+          <th>Phone</th>
+          <th>Blood Group</th>
+          <th>Address</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for p in patients %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="user-avatar-sm" style="background: var(--teal-50); color: var(--teal-700); border-color: var(--teal-100);">
+                {{ p.full_name[:2]|upper }}
+              </div>
+              <div>
+                <a href="{{ url_for('patients.view_patient', patient_id=p.id) }}" class="table-cell-title">
+                  {{ p.full_name }}
+                </a>
+                <div class="table-cell-sub">ID: #PT-{{ "%04d"|format(p.id) }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ p.date_of_birth or "—" }}</td>
+          <td>{{ p.gender or "—" }}</td>
+          <td class="font-monospace small">{{ p.phone or "—" }}</td>
+          <td>
+            {% if p.blood_group %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2">{{ p.blood_group }}</span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="small text-muted" style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            {{ p.address or "—" }}
+          </td>
+          <td class="text-end">
+            <div class="d-inline-flex gap-1">
+              <a href="{{ url_for('patients.view_patient', patient_id=p.id) }}" class="btn btn-sm btn-outline-secondary py-0 px-2" title="View Patient Details">
+                <i class="bi bi-eye"></i> View
+              </a>
+              {% if current_user.role in ['admin','receptionist'] %}
+              <a href="{{ url_for('patients.edit_patient', patient_id=p.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Update Patient Details">
+                <i class="bi bi-pencil-square"></i> Update
+              </a>
+              {% endif %}
+              {% if current_user.role == 'admin' %}
+              <form method="post" action="{{ url_for('patients.delete_patient', patient_id=p.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to permanently delete patient {{ p.full_name }} and all linked appointments and medical records?');">
+                {% include "_csrf.html" %}
+                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Delete Patient Record">
+                  <i class="bi bi-trash"></i> Delete
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <div class="empty-state-icon"><i class="bi bi-people"></i></div>
+              <div class="empty-state-title">No patients found</div>
+              <div class="empty-state-text">There are no patient records matching your current filter query.</div>
+              {% if current_user.role in ['admin','receptionist'] %}
+              <a href="{{ url_for('patients.new_patient') }}" class="btn-primary-brand btn-sm">Register New Patient</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

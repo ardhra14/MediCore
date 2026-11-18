@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Medical Specialists — MediCore{% endblock %}
+{% block page_title %}Doctor &amp; Specialist Directory{% endblock %}
+
+{% block content %}
+<div class="card-surface">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <form method="get" class="d-flex flex-wrap align-items-center gap-2" style="max-width: 540px;">
+      <div class="input-group" style="width: 240px;">
+        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+        <input class="form-control border-start-0 ps-0" name="q" value="{{ q }}" placeholder="Search doctor or specialty...">
+      </div>
+
+      <select class="form-select" name="department_id" style="width: 180px;">
+        <option value="">All Departments</option>
+        {% for dep in departments %}
+        <option value="{{ dep.id }}" {{ "selected" if selected_department == dep.id }}>{{ dep.name }}</option>
+        {% endfor %}
+      </select>
+
+      <button class="btn btn-secondary-brand" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+      {% if q or selected_department %}
+      <a href="{{ url_for('doctors.list_doctors') }}" class="btn btn-sm btn-outline-secondary" title="Reset Filters"><i class="bi bi-x-lg"></i></a>
+      {% endif %}
+    </form>
+
+    {% if current_user.role == 'admin' %}
+    <a href="{{ url_for('doctors.new_doctor') }}" class="btn-primary-brand">
+      <i class="bi bi-plus-circle"></i> Add Doctor
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="table-responsive-clean">
+    <table class="table-clean">
+      <thead>
+        <tr>
+          <th>Doctor</th>
+          <th>Department</th>
+          <th>Specialty</th>
+          <th>Contact</th>
+          <th>Weekly Availability</th>
+          <th>Active Load</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for d in doctors %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="user-avatar-sm" style="background: var(--teal-50); color: var(--teal-700); border-color: var(--teal-100);">
+                {{ d.full_name[:2]|upper }}
+              </div>
+              <div>
+                <a href="{{ url_for('doctors.view_doctor', doctor_id=d.id) }}" class="table-cell-title">
+                  {{ d.full_name }}
+                </a>
+                <div class="table-cell-sub">{{ d.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            {% if d.department_name %}
+            <span class="badge bg-light text-dark border">{{ d.department_name }}</span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="text-secondary fw-medium">{{ d.specialty or "—" }}</td>
+          <td class="font-monospace small">{{ d.phone or "—" }}</td>
+          <td class="small text-muted">{{ d.availability or "—" }}</td>
+          <td>
+            <span class="badge bg-light text-muted border">{{ d.active_appointments or 0 }} visits</span>
+          </td>
+          <td class="text-end">
+            <div class="d-inline-flex gap-1">
+              <a href="{{ url_for('doctors.view_doctor', doctor_id=d.id) }}" class="btn btn-sm btn-outline-secondary py-0 px-2" title="View Doctor Profile">
+                <i class="bi bi-eye"></i> View
+              </a>
+              {% if current_user.role == 'admin' %}
+              <a href="{{ url_for('doctors.edit_doctor', doctor_id=d.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Update Doctor Profile">
+                <i class="bi bi-pencil-square"></i> Update
+              </a>
+              <form method="post" action="{{ url_for('doctors.delete_doctor', doctor_id=d.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to remove Dr. {{ d.full_name }} from the medical directory?');">
+                {% include "_csrf.html" %}
+                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Delete Doctor">
+                  <i class="bi bi-trash"></i> Delete
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <div class="empty-state-icon"><i class="bi bi-heart-pulse"></i></div>
+              <div class="empty-state-title">No doctors found</div>
+              <div class="empty-state-text">No specialist profiles match your search criteria.</div>
+              {% if current_user.role == 'admin' %}
+              <a href="{{ url_for('doctors.new_doctor') }}" class="btn-primary-brand btn-sm">Add Specialist</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

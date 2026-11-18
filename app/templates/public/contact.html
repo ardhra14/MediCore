@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Contact Us — MediCore Healthcare Systems{% endblock %}
+{% block public_content %}
+<nav class="public-nav">
+  <a href="{{ url_for('public.landing') }}" class="d-flex align-items-center">
+    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="MediCore" height="34">
+  </a>
+  <div class="links">
+    <a href="{{ url_for('public.about') }}">About Platform</a>
+    <a href="{{ url_for('public.contact') }}" class="fw-bold text-teal">Contact Support</a>
+    <a href="{{ url_for('auth.login') }}">Sign in</a>
+    <a href="{{ url_for('auth.register') }}" class="btn-primary-brand">Create Account</a>
+  </div>
+</nav>
+
+<section class="section-pad" style="max-width: 920px;">
+  <div class="row g-4">
+    <div class="col-lg-5">
+      <span class="text-teal fw-bold small text-uppercase">Direct Inquiries</span>
+      <h2 class="fw-bold text-dark mt-1">Get in Touch</h2>
+      <p class="text-muted" style="line-height: 1.6;">
+        Have questions regarding hospital deployment, patient records, or technical administration? Reach out to our team in Kochi, Kerala.
+      </p>
+
+      <div class="mt-4">
+        <div class="d-flex align-items-start gap-3 mb-3">
+          <div class="stat-icon icon-teal"><i class="bi bi-geo-alt"></i></div>
+          <div>
+            <div class="fw-semibold text-dark">Clinical Headquarters</div>
+            <div class="small text-muted">14/280 Panampilly Nagar, Kochi, Kerala 682036, India</div>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-start gap-3 mb-3">
+          <div class="stat-icon icon-blue"><i class="bi bi-telephone"></i></div>
+          <div>
+            <div class="fw-semibold text-dark">Phone Helpdesk</div>
+            <div class="small text-muted">+91 484 231 0455 &bull; +91 94470 12041</div>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-start gap-3 mb-3">
+          <div class="stat-icon icon-emerald"><i class="bi bi-envelope"></i></div>
+          <div>
+            <div class="fw-semibold text-dark">Electronic Mail</div>
+            <div class="small text-muted">support@medicore.test &bull; info@medicore.test</div>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-start gap-3">
+          <div class="stat-icon icon-amber"><i class="bi bi-clock"></i></div>
+          <div>
+            <div class="fw-semibold text-dark">Administration Hours</div>
+            <div class="small text-muted">Monday &ndash; Saturday: 08:30 &ndash; 18:00 IST</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="card-surface">
+        <h5 class="fw-bold text-dark mb-1">Send a Message</h5>
+        <p class="text-muted small mb-4">Our clinical coordinators will review your note and respond promptly.</p>
+
+        <form method="post">
+          {% include "_csrf.html" %}
+          <div class="mb-3">
+            <label class="form-label">Full Name <span class="text-danger">*</span></label>
+            <input class="form-control" name="name" value="{{ name or '' }}" required placeholder="e.g. Eldho Paulose">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Email Address <span class="text-danger">*</span></label>
+            <input class="form-control" type="email" name="email" value="{{ email or '' }}" required placeholder="name@domain.com">
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Message / Inquiry Details <span class="text-danger">*</span></label>
+            <textarea class="form-control" name="message" rows="4" required placeholder="Describe your inquiry, appointment question, or feedback...">{{ message or '' }}</textarea>
+          </div>
+
+          <button class="btn-primary-brand w-100 py-2" type="submit">
+            <i class="bi bi-send"></i> Submit Message
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  &copy; 2026 MediCore Healthcare Systems. Fictional sample patient records.
+</footer>
+{% endblock %}
