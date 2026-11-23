@@ -26,27 +26,29 @@
     </button>
     <div class="collapse navbar-collapse" id="topNav">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard.overview') }}">Overview</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('patients.list_patients') }}">Patients</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('doctors.list_doctors') }}">Doctors</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('appointments.list_appointments') }}">Appointments</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard.overview') }}"><i class="bi bi-grid-1x2 me-1"></i>{{ "Portal" if current_user.role == 'patient' else "Overview" }}</a></li>
+        {% if current_user.role in ['admin', 'doctor', 'receptionist'] %}
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('patients.list_patients') }}"><i class="bi bi-people me-1"></i>Patients</a></li>
+        {% endif %}
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('doctors.list_doctors') }}"><i class="bi bi-heart-pulse me-1"></i>Doctors</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('appointments.list_appointments') }}"><i class="bi bi-calendar2-check me-1"></i>Appointments</a></li>
         {% if current_user.role in ['admin', 'doctor'] %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('records.list_records') }}">Medical Records</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('records.list_records') }}"><i class="bi bi-file-earmark-medical me-1"></i>Medical Records</a></li>
         {% endif %}
         {% if current_user.role in ['admin', 'receptionist'] %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('billing.list_invoices') }}">Billing</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('billing.list_invoices') }}"><i class="bi bi-receipt me-1"></i>Billing</a></li>
         {% endif %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('departments.list_departments') }}">Departments</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('departments.list_departments') }}"><i class="bi bi-diagram-3 me-1"></i>Departments</a></li>
         {% if current_user.role == 'admin' %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('staff.list_staff') }}">Staff</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('reports.index') }}">Reports</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('staff.list_staff') }}"><i class="bi bi-person-badge me-1"></i>Staff</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('reports.index') }}"><i class="bi bi-bar-chart-line me-1"></i>Reports</a></li>
         {% endif %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('settings.index') }}">Settings</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('settings.index') }}"><i class="bi bi-gear me-1"></i>Settings</a></li>
       </ul>
       <div class="d-flex align-items-center gap-2">
         <span class="role-pill role-{{ current_user.role }}">{{ current_user.role }}</span>
         <span class="fw-semibold text-dark d-none d-sm-inline">{{ current_user.full_name }}</span>
-        <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-secondary">Logout</a>
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-arrow-left"></i> Logout</a>
       </div>
     </div>
   </div>

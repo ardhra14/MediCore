@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import create_app
 from config import Config
+from app.auth.routes import _LOGIN_ATTEMPTS
 
 
 class TestConfig(Config):
@@ -26,6 +27,7 @@ class TestConfig(Config):
 
 class MediCoreTestCase(unittest.TestCase):
     def setUp(self):
+        _LOGIN_ATTEMPTS.clear()
         self.db_fd, self.db_path = tempfile.mkstemp()
         TestConfig.DATABASE_PATH = self.db_path
         self.app = create_app(TestConfig)
@@ -422,6 +424,163 @@ class MediCoreTestCase(unittest.TestCase):
         data = resp.get_json()
         self.assertTrue(data.get("authenticated"))
         self.assertEqual(data.get("full_name"), "Ardhra")
+
+    # --- Extended Security & RBAC Tests -------------------------------------
+    def test_login_rate_limiting(self):
+        # 5 consecutive failed login attempts
+        for i in range(5):
+            resp = self.client.post(
+                "/login",
+                data={"email": "admin@medicore.test", "password": "WrongPassword!"},
+                follow_redirects=True,
+            )
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn(b"Invalid email or password", resp.data)
+
+        # 6th attempt should be blocked by rate limiting
+        resp = self.client.post(
+            "/login",
+            data={"email": "admin@medicore.test", "password": "Passw0rd!"},
+            follow_redirects=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Too many failed login attempts", resp.data)
+
+    def test_secure_password_reset_flow(self):
+        # Request password reset for admin
+        resp = self.client.post(
+            "/forgot-password",
+            data={"email": "admin@medicore.test"},
+            follow_redirects=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"reset link has been generated", resp.data)
+
+        # Fetch token from database
+        with self.app.app_context():
+            from app.models.db import get_db
+            db = get_db()
+            reset_row = db.execute(
+                "SELECT * FROM password_resets WHERE user_id = 1 AND used = 0 ORDER BY id DESC"
+            ).fetchone()
+            self.assertIsNotNone(reset_row)
+
+        # Token was hashed in DB; find the token generated in the flash text or generate one for testing
+        # We can test the reset endpoint directly using a known raw token
+        import secrets
+        import hashlib
+        from datetime import datetime, timedelta
+
+        raw_test_token = secrets.token_urlsafe(32)
+        test_hash = hashlib.sha256(raw_test_token.encode()).hexdigest()
+        expires = datetime.utcnow() + timedelta(minutes=15)
+
+        with self.app.app_context():
+            db = get_db()
+            db.execute(
+                "INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, ?)",
+                (1, test_hash, expires.isoformat()),
+            )
+            db.commit()
+
+        # Perform password reset
+        resp = self.client.post(
+            f"/reset-password/{raw_test_token}",
+            data={"password": "NewSecurePassword123!"},
+            follow_redirects=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Password updated", resp.data)
+
+        # Confirm old password no longer works
+        resp = self.client.post(
+            "/login",
+            data={"email": "admin@medicore.test", "password": "Passw0rd!"},
+            follow_redirects=True,
+        )
+        self.assertIn(b"Invalid email or password", resp.data)
+
+        # Confirm new password logs in successfully
+        resp = self.client.post(
+            "/login",
+            data={"email": "admin@medicore.test", "password": "NewSecurePassword123!"},
+            follow_redirects=True,
+        )
+        self.assertIn(b"Overview", resp.data)
+
+    def test_patient_rbac_access_restrictions(self):
+        from werkzeug.security import generate_password_hash
+        with self.app.app_context():
+            from app.models.db import get_db
+            db = get_db()
+            pw = generate_password_hash("Passw0rd!")
+            db.execute(
+                "INSERT INTO users (id, full_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
+                (10, "Patient One", "patient1@medicore.test", pw, "patient"),
+            )
+            db.execute(
+                "INSERT INTO patients (id, user_id, full_name) VALUES (?, ?, ?)",
+                (10, 10, "Patient One"),
+            )
+            db.execute(
+                "INSERT INTO users (id, full_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
+                (11, "Patient Two", "patient2@medicore.test", pw, "patient"),
+            )
+            db.execute(
+                "INSERT INTO patients (id, user_id, full_name) VALUES (?, ?, ?)",
+                (11, 11, "Patient Two"),
+            )
+            db.commit()
+
+        # Login as Patient One
+        self.client.post(
+            "/login",
+            data={"email": "patient1@medicore.test", "password": "Passw0rd!"},
+            follow_redirects=True,
+        )
+
+        # Patient visiting /patients/ is redirected to their own profile (/patients/10)
+        resp = self.client.get("/patients/", follow_redirects=False)
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/patients/10", resp.headers.get("Location", ""))
+
+        # Patient One attempting to view Patient Two's profile (/patients/11) is blocked
+        resp = self.client.get("/patients/11", follow_redirects=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Access denied", resp.data)
+
+    def test_doctor_role_restrictions(self):
+        from werkzeug.security import generate_password_hash
+        with self.app.app_context():
+            from app.models.db import get_db
+            db = get_db()
+            pw = generate_password_hash("Passw0rd!")
+            db.execute(
+                "INSERT INTO users (id, full_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
+                (20, "Dr. Test Doctor", "dr.test@medicore.test", pw, "doctor"),
+            )
+            db.execute(
+                "INSERT INTO doctors (id, user_id, department_id, specialty) VALUES (?, ?, ?, ?)",
+                (20, 20, 1, "General"),
+            )
+            db.commit()
+
+        # Login as Doctor
+        self.client.post(
+            "/login",
+            data={"email": "dr.test@medicore.test", "password": "Passw0rd!"},
+            follow_redirects=True,
+        )
+
+        # Doctor cannot access admin-only staff management
+        resp = self.client.get("/staff/new", follow_redirects=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"do not have permission", resp.data)
+
+        # Doctor cannot create departments
+        resp = self.client.get("/departments/new", follow_redirects=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"do not have permission", resp.data)
 
 
 if __name__ == "__main__":

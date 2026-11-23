@@ -10,6 +10,8 @@ appointments_bp = Blueprint("appointments", __name__, url_prefix="/appointments"
 @login_required
 def list_appointments():
     db = get_db()
+    from app.auth.utils import current_user
+    user = current_user()
     status = request.args.get("status", "").strip()
     q = request.args.get("q", "").strip()
     doctor_id = request.args.get("doctor_id", "").strip()
@@ -24,6 +26,14 @@ def list_appointments():
         WHERE 1=1
     """
     params = []
+
+    if user and user["role"] == "patient":
+        patient = db.execute("SELECT id FROM patients WHERE user_id = ?", (user["id"],)).fetchone()
+        if patient:
+            query += " AND a.patient_id = ?"
+            params.append(patient["id"])
+        else:
+            query += " AND 1=0"
 
     if status:
         query += " AND a.status = ?"
@@ -56,9 +66,11 @@ def list_appointments():
 
 @appointments_bp.route("/new", methods=["GET", "POST"])
 @login_required
-@roles_required("admin", "doctor", "receptionist")
+@roles_required("admin", "doctor", "receptionist", "patient")
 def new_appointment():
     db = get_db()
+    from app.auth.utils import current_user
+    user = current_user()
     patients = db.execute("SELECT * FROM patients ORDER BY full_name").fetchall()
     doctors = db.execute(
         """
@@ -75,8 +87,18 @@ def new_appointment():
     pre_patient_id = request.args.get("patient_id", type=int)
     pre_doctor_id = request.args.get("doctor_id", type=int)
 
+    if user and user["role"] == "patient":
+        my_patient = db.execute("SELECT id FROM patients WHERE user_id = ?", (user["id"],)).fetchone()
+        if my_patient:
+            pre_patient_id = my_patient["id"]
+
     if request.method == "POST":
-        patient_id = request.form.get("patient_id")
+        if user and user["role"] == "patient":
+            my_patient = db.execute("SELECT id FROM patients WHERE user_id = ?", (user["id"],)).fetchone()
+            patient_id = my_patient["id"] if my_patient else None
+        else:
+            patient_id = request.form.get("patient_id")
+
         doctor_id = request.form.get("doctor_id")
         scheduled_at = request.form.get("scheduled_at")
         reason = request.form.get("reason", "").strip()
@@ -122,13 +144,26 @@ def new_appointment():
 
 @appointments_bp.route("/<int:appt_id>/status/<new_status>", methods=["POST"])
 @login_required
-@roles_required("admin", "doctor", "receptionist")
+@roles_required("admin", "doctor", "receptionist", "patient")
 def update_status(appt_id, new_status):
     if new_status not in ("pending", "confirmed", "cancelled", "completed"):
         flash("Invalid appointment status specified.", "danger")
         return redirect(url_for("appointments.list_appointments"))
 
     db = get_db()
+    from app.auth.utils import current_user
+    user = current_user()
+    appt = db.execute("SELECT patient_id FROM appointments WHERE id = ?", (appt_id,)).fetchone()
+    if not appt:
+        flash("Appointment not found.", "danger")
+        return redirect(url_for("appointments.list_appointments"))
+
+    if user and user["role"] == "patient":
+        my_patient = db.execute("SELECT id FROM patients WHERE user_id = ?", (user["id"],)).fetchone()
+        if not my_patient or appt["patient_id"] != my_patient["id"] or new_status != "cancelled":
+            flash("Access denied. Patients can only cancel their own appointments.", "danger")
+            return redirect(url_for("appointments.list_appointments"))
+
     db.execute("UPDATE appointments SET status = ? WHERE id = ?", (new_status, appt_id))
     db.commit()
     flash(f"Appointment status updated to '{new_status}'.", "success")
@@ -137,9 +172,11 @@ def update_status(appt_id, new_status):
 
 @appointments_bp.route("/<int:appt_id>/reschedule", methods=["GET", "POST"])
 @login_required
-@roles_required("admin", "doctor", "receptionist")
+@roles_required("admin", "doctor", "receptionist", "patient")
 def reschedule(appt_id):
     db = get_db()
+    from app.auth.utils import current_user
+    user = current_user()
     appt = db.execute(
         """
         SELECT a.*, p.full_name AS patient_name, u.full_name AS doctor_name
@@ -154,6 +191,12 @@ def reschedule(appt_id):
     if not appt:
         flash("Appointment not found.", "danger")
         return redirect(url_for("appointments.list_appointments"))
+
+    if user and user["role"] == "patient":
+        my_patient = db.execute("SELECT id FROM patients WHERE user_id = ?", (user["id"],)).fetchone()
+        if not my_patient or appt["patient_id"] != my_patient["id"]:
+            flash("Access denied. You can only reschedule your own appointments.", "danger")
+            return redirect(url_for("appointments.list_appointments"))
 
     if request.method == "POST":
         scheduled_at = request.form.get("scheduled_at")
@@ -174,7 +217,7 @@ def reschedule(appt_id):
 
 @appointments_bp.route("/<int:appt_id>/delete", methods=["POST"])
 @login_required
-@roles_required("admin", "receptionist")
+@roles_required("admin")
 def delete_appointment(appt_id):
     db = get_db()
     appt = db.execute("SELECT id FROM appointments WHERE id = ?", (appt_id,)).fetchone()

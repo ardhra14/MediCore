@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="app/static/images/logo.svg" alt="MediCore Healthcare Systems" width="260">
+  <img src="app/static/images/logo.svg" alt="MediCore Healthcare Systems" width="280">
 </p>
 
 <h3 align="center">Enterprise Healthcare Operating System &amp; Clinical Administration Platform</h3>
 
 <p align="center">
-  A full-stack hospital and clinical practice administration suite built for modern healthcare facilities — featuring role-based operations, electronic health records, automated billing, analytics telemetry, and an isolated cybersecurity penetration-testing lab.
+  A full-stack hospital and clinical practice administration suite engineered for modern healthcare facilities — featuring role-based clinical workflows, electronic health records (EMR), automated invoicing, real-time analytics telemetry, and an isolated cybersecurity penetration-testing lab.
 </p>
 
 <p align="center">
@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/Database-SQLite%203-003B57?logo=sqlite&logoColor=white" alt="SQLite 3">
   <img src="https://img.shields.io/badge/UI-Bootstrap%205.3%20%7C%20Chart.js-purple" alt="Bootstrap 5.3">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License">
+  <img src="https://img.shields.io/badge/Tests-18%20Passed-success" alt="Tests Passed">
 </p>
 
 ---
@@ -22,49 +23,171 @@
 
 - [Overview](#overview)
 - [Key Features](#key-features)
+- [System Architecture](#system-architecture)
+- [Database Schema (ERD)](#database-schema-erd)
+- [Role-Based Access Control (RBAC)](#role-based-access-control-rbac)
+- [Application Security Architecture](#application-security-architecture)
+- [Isolated Security Lab (Educational Penetration Testing)](#isolated-security-lab-educational-penetration-testing)
 - [Technology Stack](#technology-stack)
-- [Architecture & Design](#architecture--design)
-- [Installation & Quickstart](#installation--quickstart)
+- [Installation & Setup](#installation--setup)
 - [Pre-Configured Test Accounts](#pre-configured-test-accounts)
-- [Screenshots](#screenshots)
-- [Security Lab (Educational Testing)](#security-lab-educational-testing)
 - [Running Automated Tests](#running-automated-tests)
-- [Project Structure](#project-structure)
+- [Project Directory Structure](#project-directory-structure)
+- [Contributing](#contributing)
 - [License](#license)
 
 ---
 
 ## Overview
 
-**MediCore** is an enterprise-grade clinic and hospital administration platform developed to streamline outpatient and inpatient clinical workflows. From patient intake and demographic tracking to specialist scheduling, electronic medical records (EMR), prescription authoring, and GST-ready billing receipts, MediCore unifies all hospital operations into a coherent, responsive SaaS interface.
+**MediCore** is a comprehensive hospital information management platform designed to unify administrative, clinical, and patient-facing workflows into a secure, responsive interface styled with a modern Black &amp; Clinical Green theme (`#0F172A` &amp; `#16A34A` / `#22C55E`).
 
-In addition to production-style secure authentication (salted PBKDF2 hashing, CSPRNG 256-bit server-side session tokens, and short-lived hashed reset tokens), MediCore houses an **isolated cybersecurity lab** containing two intentionally vulnerable authentication mechanisms for authorized penetration testing, CTF training, and educational evaluation.
+The platform provides role-segregated portals for:
+1. **System Administrators (Ardhra)**: System-wide governance, staff and doctor onboarding, department configuration, and clinical oversight.
+2. **Physicians &amp; Specialists**: Daily appointment rosters, longitudinal patient health history, clinical progress note authoring, and electronic prescriptions (EMR).
+3. **Front Desk &amp; Receptionists**: Patient intake, appointment booking, rescheduling, and billing invoicing.
+4. **Patients**: Self-service appointment booking, upcoming visit tracking, and confidential access to personal medical records.
+
+In addition to hardened production authentication, MediCore includes an **isolated cybersecurity lab** containing two intentionally vulnerable authentication mechanisms for authorized penetration testing, vulnerability assessment, and educational training.
 
 ---
 
 ## Key Features
 
-### 1. Clinical Operations
-- **Patient Registry & EMR**: Complete demographic profiles, blood group tracking, contact information, and longitudinal medical visit history.
-- **Multi-Field Patient Search**: Instant lookup by name, phone number, address locality, blood group, or gender.
-- **Doctor & Specialist Roster**: Profiles detailing specialties (Cardiology, Pediatrics, Orthopedics, Dermatology, General Medicine), OPD availability hours, and active caseloads.
-- **OPD Appointment Scheduling**: Book visits, reschedule slots, and transition states (`pending` &rarr; `confirmed` &rarr; `completed` or `cancelled`).
-- **Electronic Medical Records (EMR)**: Structured diagnosis records, physician clinical progress notes, and Rx prescriptions with printable clinical charts.
+### 1. Clinical Operations &amp; Electronic Medical Records (EMR)
+- **Patient Registry &amp; Search**: Filterable directory by name, phone, locality, blood group, and gender.
+- **Doctor &amp; Specialist Roster**: Clinical credentialing across Cardiology, Pediatrics, Orthopedics, Dermatology, and General Medicine.
+- **Appointment Scheduling**: Multi-state appointment lifecycle (`pending` &rarr; `confirmed` &rarr; `completed` / `cancelled`).
+- **Electronic Health Records**: Structured clinical progress notes, diagnostic summaries, and physician prescriptions.
 
-### 2. Practice Administration & Billing
-- **Hospital Department Hierarchy**: Configure clinical divisions with automated doctor, staff, and appointment counts.
-- **Staff Credentialing**: Onboard receptionists, intake specialists, and clinical coordinators with department assignments.
-- **Patient Invoicing & Ledger**: Generate tax invoices with itemized OPD rates, track payment statuses (`unpaid`, `paid`, `overdue`), and print formal medical receipts.
+### 2. Hospital Governance &amp; Administration
+- **Department Hierarchy**: Organizational unit management with real-time staff, physician, and appointment counts.
+- **Staff Credentialing**: Role assignments for receptionists, triage nurses, and intake coordinators.
+- **Patient Billing &amp; Invoicing**: Itemized medical services, GSTIN tax calculations, invoice state tracking (`unpaid`, `paid`, `overdue`), and printable receipts.
 
-### 3. Analytics & Reporting
-- **Interactive Telemetry**: Real-time Chart.js doughnut charts visualizing appointment caseloads by status.
-- **Doctor Workload Matrix**: Breakdown of total patient consultations and completion metrics.
-- **One-Click CSV Exports**: Download complete datasets for Appointments, Invoices, and Patients directly from the Reports portal.
+### 3. Analytics &amp; Reporting
+- **Caseload Telemetry**: Interactive Chart.js doughnut visualizations of appointment distribution.
+- **Specialist Workload Metrics**: Breakdown of patient visits and completion rates per physician.
+- **Data Export**: One-click CSV generation for Appointments, Invoices, and Patient directories.
 
-### 4. Account Settings & Security
-- **Personal Profile Management**: Update contact phone numbers and residential addresses.
-- **Self-Service Password Change**: Verified current password check, PBKDF2 salting, and automatic invalidation of all other active sessions.
-- **Active Session Monitor**: View live cryptographic session tokens and revoke foreign sessions with a single click.
+---
+
+## System Architecture
+
+```mermaid
+graph TD
+    Client["Web Browser Client"] --> WebServer["Flask Application Engine (WSGI)"]
+    WebServer --> SecMiddleware["Security & Auth Middleware\n(CSPRNG Sessions, Rate Limiting, RBAC Guards)"]
+    SecMiddleware --> AppBlueprints["Production Modules\n(Patients, Doctors, Appointments, EMR, Billing, Reports)"]
+    SecMiddleware -. "SECURITY_LAB_ENABLED=1\nHost: 127.0.0.1 / localhost" .-> SecurityLab["Isolated Security Lab\n(CWE-640 & CWE-384 Blueprints)"]
+    AppBlueprints --> ProdDB[("SQLite Database\nmedicore.db (10 Relational Tables)")]
+    SecurityLab --> LabDB[("Lab Tables\nvuln_reset_tokens, vuln_sessions")]
+```
+
+---
+
+## Database Schema (ERD)
+
+```mermaid
+erDiagram
+    USERS ||--o| DOCTORS : "has profile"
+    USERS ||--o| STAFF : "has profile"
+    USERS ||--o| PATIENTS : "has account"
+    USERS ||--o{ SESSIONS : "owns"
+    USERS ||--o{ PASSWORD_RESETS : "requests"
+    DEPARTMENTS ||--o{ DOCTORS : "employs"
+    DEPARTMENTS ||--o{ STAFF : "employs"
+    DEPARTMENTS ||--o{ APPOINTMENTS : "schedules in"
+    PATIENTS ||--o{ APPOINTMENTS : "books"
+    PATIENTS ||--o{ MEDICAL_RECORDS : "receives"
+    PATIENTS ||--o{ INVOICES : "billed"
+    DOCTORS ||--o{ APPOINTMENTS : "consults"
+    DOCTORS ||--o{ MEDICAL_RECORDS : "authors"
+    INVOICES ||--o{ INVOICE_ITEMS : "contains"
+```
+
+---
+
+## Role-Based Access Control (RBAC)
+
+MediCore enforces strict server-side authorization checks on every endpoint using `@login_required` and `@roles_required` decorators:
+
+| Capability / Route | Administrator (`admin`) | Physician (`doctor`) | Receptionist (`receptionist`) | Patient (`patient`) |
+|---|:---:|:---:|:---:|:---:|
+| System Dashboard &amp; Clinical Overview | &#10004; | &#10004; | &#10004; | &#10004; *(Personalized)* |
+| Manage Staff &amp; Doctors (`/staff`, `/doctors`) | &#10004; | &#10008; | &#10008; | &#10008; |
+| Manage Clinical Departments (`/departments`) | &#10004; | View Only | View Only | View Only |
+| Patient Intake &amp; Registration | &#10004; | &#10004; | &#10004; | Self-Register |
+| Patient Directory Search (`/patients/`) | &#10004; | &#10004; | &#10004; | &#10008; *(Own Profile Only)* |
+| View Patient Medical Records (`/records/`) | &#10004; | &#10004; | &#10008; | &#10008; *(Own Record Only)* |
+| Author Medical Record / Prescription | &#10004; | &#10004; | &#10008; | &#10008; |
+| Schedule &amp; Update Appointments | &#10004; | Status Only | &#10004; | Self-Book Only |
+| Billing &amp; Invoices (`/billing`) | &#10004; | &#10008; | &#10004; | View Own Invoice |
+| System Reports &amp; CSV Exports | &#10004; | &#10008; | &#10004; | &#10008; |
+
+---
+
+## Application Security Architecture
+
+### 1. Password Security
+- Passwords are never stored in plaintext. Passwords are salted and hashed using PBKDF2-HMAC-SHA256 (`werkzeug.security`) with 600,000 iterations.
+- Minimum password length of 8 characters enforced at registration, password reset, and user creation.
+
+### 2. Session Management
+- Session tokens are generated using `secrets.token_urlsafe(32)` providing 256 bits of CSPRNG entropy.
+- Tokens are stored server-side in the `sessions` table and verified against active user status.
+- Cookies are transmitted with `HttpOnly=True`, `SameSite=Lax`, and `Secure=True` when behind TLS.
+- Password change automatically revokes all other active sessions for that user account.
+
+### 3. Server-Side Login Rate Limiting
+- MediCore tracks login failures per email and client IP (`_LOGIN_ATTEMPTS`).
+- After **5 consecutive failed attempts**, login requests for that key are locked out for **15 minutes**.
+- Rate limiting is enforced server-side in memory and cannot be bypassed by clearing cookies or opening private browsing windows.
+
+### 4. Cross-Site Request Forgery (CSRF) Protection
+- State-changing `POST` requests require a valid cryptographic CSRF token generated via `Flask-WTF`.
+- CSRF tokens are injected automatically into forms and validated on submission.
+
+### 5. Injection Prevention &amp; Output Encoding
+- **SQL Injection**: All database operations use SQLite parameterized queries (`?` placeholders) through Python's `sqlite3` cursor. No user input is directly concatenated into SQL.
+- **Cross-Site Scripting (XSS)**: Jinja2 autoescaping is active across all templates.
+
+### 6. Security Headers
+The application automatically attaches defense-in-depth HTTP security headers to every response:
+- `X-Frame-Options: SAMEORIGIN` (prevents clickjacking)
+- `X-Content-Type-Options: nosniff` (prevents MIME type sniffing)
+- `X-XSS-Protection: 1; mode=block`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+
+---
+
+## Isolated Security Lab (Educational Penetration Testing)
+
+MediCore houses two intentionally vulnerable authentication implementations located in `security_lab/`. These exist exclusively for security researchers, students, and penetration testers to understand real-world authentication flaws.
+
+### Lab Safety Guardrails
+- **Disabled by default**: `SECURITY_LAB_ENABLED=0` in `config.py` and `.env`.
+- **Localhost Bound**: A `before_request` hook returns HTTP 403 Forbidden if the request `Host` is not `127.0.0.1` or `localhost`.
+- **Data Isolation**: The lab maintains its own separate tables (`vuln_reset_tokens`, `vuln_sessions`) and never shares state with production authentication.
+
+### Vulnerability 1: Weak Password Recovery (CWE-640, CWE-330)
+- **Endpoint**: `/lab/password-recovery/forgot-password` &amp; `/lab/password-recovery/reset/<token>`
+- **Flaw**: Reset tokens are computed using deterministic string formatting:
+  ```python
+  # security_lab/broken_password_recovery/routes.py
+  now = datetime.utcnow()
+  user_part = f"{user['id'] % 100:02d}"
+  time_part = f"{now.hour * 60 + now.minute:04d}"
+  token = f"{user_part}{time_part}"  # Only 6 digits; easily guessable!
+  ```
+- **Remediation**: Use `secrets.token_urlsafe(32)`, store only a SHA-256 hash in the database, set an expiry timestamp (15 minutes), and mark single-use upon redemption (as implemented in `app/auth/routes.py`).
+
+### Vulnerability 2: Insecure Session Management (CWE-384, CWE-330)
+- **Endpoint**: `/lab/session-demo/login` &amp; `/lab/session-demo/whoami`
+- **Flaw**: The session cookie (`lab_session`) is set directly to the sequential auto-incrementing integer primary key from the `vuln_sessions` table, lacking `HttpOnly` and `SameSite` flags.
+- **Remediation**: Issue high-entropy 256-bit CSPRNG tokens, store them server-side, and configure `HttpOnly=True`, `SameSite=Lax`, and `Secure=True` cookies.
+
+For complete reproduction walkthroughs, refer to [`docs/security_testing.md`](docs/security_testing.md).
 
 ---
 
@@ -72,18 +195,18 @@ In addition to production-style secure authentication (salted PBKDF2 hashing, CS
 
 | Layer | Component | Notes |
 |---|---|---|
-| **Frontend** | HTML5, CSS3, JavaScript (ES6+) | Modern clinical SaaS design system, zero bloated heavy frameworks |
-| **Styling** | Custom CSS + Bootstrap 5.3 | Responsive flexbox/grid layout, CSS custom properties |
-| **Icons** | Bootstrap Icons 1.11 | Crisp clinical and administrative iconography |
-| **Visualizations** | Chart.js 4.4 | Doughnut and analytics metrics |
+| **Frontend** | HTML5, Modern CSS3, JavaScript (ES6+) | Black &amp; Clinical Green palette (`#0F172A`, `#16A34A`), responsive sidebar |
+| **Styling** | Custom CSS + Bootstrap 5.3 | Responsive flexbox/grid layout, modern clinical design system |
+| **Icons** | Bootstrap Icons 1.11 | Full CRUD action icons (Add, Edit, View, Delete, Filter, Search) |
+| **Visualizations** | Chart.js 4.4 | Real-time clinical appointment telemetry |
 | **Backend** | Python 3.9+, Flask 3.0+ | Modular Flask Blueprint architecture |
-| **Security** | Werkzeug 3.0+ | PBKDF2-HMAC-SHA256 password hashing, CSPRNG token generation |
-| **Database** | SQLite 3 | Full relational schema with cascading foreign keys (`PRAGMA foreign_keys = ON`) |
-| **Testing** | Python `unittest` & `pytest` | 17-point automated verification suite |
+| **Security** | Werkzeug 3.0+ | PBKDF2-HMAC-SHA256 password hashing, CSPRNG tokens, rate limiting |
+| **Database** | SQLite 3 | 10 relational tables with cascading foreign keys (`PRAGMA foreign_keys = ON`) |
+| **Testing** | Python `unittest` &amp; `pytest` | 18 automated tests covering auth, RBAC, CRUD, and lab flows |
 
 ---
 
-## Installation & Quickstart
+## Installation &amp; Setup
 
 ### Prerequisites
 - Python 3.9, 3.10, 3.11, or 3.12
@@ -91,19 +214,21 @@ In addition to production-style secure authentication (salted PBKDF2 hashing, CS
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/MediCore.git
+git clone https://github.com/ardhra14/MediCore.git
 cd MediCore
 ```
 
 ### 2. Set Up Virtual Environment
-```bash
-# Create virtual environment
+
+**On Windows (PowerShell):**
+```powershell
 python -m venv .venv
+.\.venv\Scripts\activate
+```
 
-# Activate on Windows:
-.venv\Scripts\activate
-
-# Activate on macOS/Linux:
+**On macOS / Linux:**
+```bash
+python3 -m venv .venv
 source .venv/bin/activate
 ```
 
@@ -114,28 +239,31 @@ pip install -r requirements.txt
 
 ### 4. Configure Environment Variables
 ```bash
-# Copy template configuration
+# Windows PowerShell
+Copy-Item .env.example .env
+
+# macOS / Linux
 cp .env.example .env
 ```
-*(On Windows PowerShell, use `Copy-Item .env.example .env`)*. The default `.env` is pre-configured for immediate local evaluation.
+*(The default configuration in `.env.example` is ready for immediate local testing).*
 
 ### 5. Seed the Database
 ```bash
 python database/seed.py
 ```
-This initializes `database/medicore.db` from `database/schema.sql` and loads realistic Indian (Malayali) profiles, departments, clinical records, appointments, and billing invoices.
+This initializes the database schema from `database/schema.sql` and loads realistic Indian (Malayali) healthcare provider profiles, clinical departments, appointments, and medical records.
 
 ### 6. Run the Application
 ```bash
 python run.py
 ```
-Open your browser and navigate to **http://127.0.0.1:5000**.
+Open your browser and navigate to: **http://127.0.0.1:5000**
 
 ---
 
 ## Pre-Configured Test Accounts
 
-All pre-seeded test accounts share the password: **`Passw0rd!`**
+All pre-seeded test accounts use the password: **`Passw0rd!`**
 
 | Role | Name | Email Address | Department / Title |
 |---|---|---|---|
@@ -152,52 +280,22 @@ All pre-seeded test accounts share the password: **`Passw0rd!`**
 | **Patient** | Reshma Susan Cherian | `reshma.cherian@medicore.test` | Outpatient (#PT-0004) |
 | **Patient** | Vinu Balakrishnan | `vinu.balakrishnan@medicore.test` | Outpatient (#PT-0005) |
 
-*(The sign-in page also features one-click quick-fill buttons for instant evaluation of each role).*
-
----
-
-## Screenshots
-
-<p align="center">
-  <em>(Replace the anchors below with real UI screenshots when preparing marketing releases)</em>
-</p>
-
-| View | Description |
-|---|---|
-| **Clinical Overview** | Live KPI metric cards, Chart.js caseload status, and upcoming appointments |
-| **Patient Directory** | Filterable registry with blood group badges, contact info, and longitudinal history |
-| **Medical Records (EMR)** | Clinical diagnoses, physical observations, and official electronic prescriptions |
-| **Tax Invoice & Receipt** | GSTIN-ready medical invoices with line-item breakdown and printable layout |
-| **Department Workloads** | Caseload distribution across Cardiology, Pediatrics, Orthopedics, and Dermatology |
-
----
-
-## Security Lab (Educational Testing)
-
-MediCore includes an isolated security lab containing **two intentionally vulnerable authentication mechanisms** designed specifically for authorized penetration-testing training and CTF practice:
-
-1. **Weak Password Recovery (CWE-640, CWE-330)**:
-   - *Location*: `security_lab/broken_password_recovery/` (`/lab/password-recovery`)
-   - *Vulnerability*: Reset token is computed using a deterministic concatenation of the numeric user ID and UTC timestamp minute, with no secret randomness or server-side expiry enforcement.
-2. **Insecure Session Management (CWE-384, CWE-330)**:
-   - *Location*: `security_lab/insecure_session_management/` (`/lab/session-demo`)
-   - *Vulnerability*: Session token is issued directly as the auto-increment integer primary key in a plain cookie lacking `HttpOnly` and `Secure` attributes, allowing session enumeration and fixation.
-
-### Lab Guardrails
-- **Host Restriction**: The vulnerable blueprints enforce a strict `before_request` hook rejecting any request whose `Host` header is not `localhost` or `127.0.0.1`.
-- **Toggle Flag**: The lab is disabled by default. Set `SECURITY_LAB_ENABLED=1` in `.env` (or the environment) to register the blueprints.
-- **Data Isolation**: The lab maintains its own separate tables (`vuln_reset_tokens`, `vuln_sessions`) and never shares state with the production authentication system.
-- **CSRF**: Production forms use Flask-WTF CSRF protection by default; set `WTF_CSRF_ENABLED=0` only for local demos or isolated tests.
-
-For step-by-step reproduction walkthroughs and remediation strategies, refer to [`docs/security_testing.md`](docs/security_testing.md).
+*(The login page includes quick-fill buttons for one-click testing of each role).*
 
 ---
 
 ## Running Automated Tests
 
-MediCore includes an automated 17-point test suite covering public pages, contact form submissions, authentication flows, CRUD operations, CSV exports, account settings, and both security lab vulnerabilities.
+MediCore includes an automated 18-point unit test suite verifying:
+- Public pages and interactive contact forms
+- User registration, login, session issuance, and logout
+- Login rate-limiting and temporary account lockout
+- Secure cryptographic password reset flow
+- Full CRUD operations for Patients, Doctors, Appointments, Medical Records, Departments, and Staff
+- Role-based access control restrictions (patient and doctor role barriers)
+- Both intentionally vulnerable security lab mechanisms and exploit verifications
 
-Run with Python's standard library test runner:
+Run the test suite with standard library `unittest`:
 ```bash
 python -m unittest tests/test_basic.py
 ```
@@ -209,32 +307,64 @@ pytest tests/
 
 ---
 
-## Project Structure
+## Project Directory Structure
 
 ```
 MediCore/
+├── .github/
+│   └── workflows/
+│       └── test.yml                # Automated CI pipeline
 ├── app/
-│   ├── auth/              # Production authentication routes & session helpers
-│   ├── models/            # Database schema models & user queries
-│   ├── routes/            # Feature modules (patients, doctors, appointments, ...)
-│   ├── static/            # Brand SVG logos, CSS SaaS theme, client JS
-│   └── templates/         # Modular Jinja2 template hierarchy
+│   ├── auth/                       # Production authentication & session management
+│   │   ├── routes.py               # Login, register, logout, rate limiting, secure reset
+│   │   ├── utils.py                # CSPRNG session generator, auth decorators, RBAC checks
+│   │   └── __init__.py
+│   ├── models/                     # Database access layer
+│   │   ├── db.py                   # SQLite connection provider & transaction management
+│   │   ├── user.py                 # User CRUD & password updates
+│   │   └── __init__.py
+│   ├── routes/                     # Application feature modules (Blueprints)
+│   │   ├── appointments.py         # Scheduling & status workflows
+│   │   ├── billing.py              # Invoicing, GST tax receipts, payment ledger
+│   │   ├── dashboard.py            # Clinical overview & Chart.js telemetry
+│   │   ├── departments.py          # Hospital clinical division management
+│   │   ├── doctors.py              # Specialist profiles & availability schedules
+│   │   ├── medical_records.py      # EMR consultations, progress notes, prescriptions
+│   │   ├── patients.py             # Patient registry, search, demographic profiles
+│   │   ├── public.py               # Landing page, about, interactive contact desk
+│   │   ├── reports.py              # Department performance & CSV exports
+│   │   ├── settings.py             # Profile management, password change, active sessions
+│   │   └── staff.py                # Administrative & front-desk staff roster
+│   ├── static/
+│   │   ├── css/styles.css          # Modern Black & Clinical Green SaaS design system
+│   │   ├── images/                 # Favicon, SVG logos, AI-generated clinic images
+│   │   └── js/app.js               # Responsive sidebar drawer, toast notifications
+│   └── templates/                  # Modular Jinja2 template hierarchy
 ├── database/
-│   ├── schema.sql         # 10 relational tables with foreign key cascades
-│   └── seed.py            # Sample data generator (Indian/Malayali profiles)
+│   ├── schema.sql                  # Complete relational schema (10 tables + indexes)
+│   └── seed.py                     # Realistic Indian / Malayali sample data generator
 ├── docs/
-│   ├── architecture.md    # Technical architecture & security specifications
-│   └── security_testing.md# Security lab reproduction guide & mitigations
-├── security_lab/          # Isolated intentionally vulnerable educational modules
+│   ├── architecture.md             # Technical architecture & security specifications
+│   └── security_testing.md         # Vulnerability reproduction guide & remediation
+├── security_lab/                   # Isolated educational penetration-testing modules
+│   ├── broken_password_recovery/   # CWE-640 / CWE-330 predictable reset token lab
+│   └── insecure_session_management/# CWE-384 / CWE-330 guessable sequential session lab
 ├── tests/
-│   └── test_basic.py      # Automated unittest & pytest suite
-├── .env.example           # Environment template
-├── .gitignore             # Comprehensive Git exclusion rules
-├── LICENSE                # MIT License
-├── README.md              # Project documentation
-├── requirements.txt       # Dependencies
-└── run.py                 # Local server entry point
+│   └── test_basic.py               # Comprehensive 18-point test suite
+├── .env.example                    # Environment variable template
+├── .gitignore                      # Git exclusion rules (ignores database and secrets)
+├── CONTRIBUTING.md                 # Contribution and security lab guidelines
+├── LICENSE                         # MIT License
+├── README.md                       # Repository documentation
+├── requirements.txt                # Production & test dependencies
+└── run.py                          # Application entry point (127.0.0.1:5000)
 ```
+
+---
+
+## Contributing
+
+Please review [`CONTRIBUTING.md`](CONTRIBUTING.md) for code style guidelines, security rules, and pull request procedures. Note that the intentionally vulnerable mechanisms in `security_lab/` must remain preserved for educational testing.
 
 ---
 
@@ -244,4 +374,4 @@ This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-*Disclaimer: All patient data, names, clinical diagnoses, and financial records in this repository are entirely fictional and generated for educational and portfolio demonstration purposes.*
+*Disclaimer: All patient data, names, clinical diagnoses, and billing records in this repository are entirely fictional and generated for educational and portfolio demonstration purposes.*

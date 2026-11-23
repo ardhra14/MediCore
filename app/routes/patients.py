@@ -11,6 +11,15 @@ patients_bp = Blueprint("patients", __name__, url_prefix="/patients")
 @roles_required("admin", "doctor", "receptionist", "patient")
 def list_patients():
     db = get_db()
+    from app.auth.utils import current_user
+    user = current_user()
+    if user and user["role"] == "patient":
+        my_patient = db.execute("SELECT id FROM patients WHERE user_id = ?", (user["id"],)).fetchone()
+        if my_patient:
+            return redirect(url_for("patients.view_patient", patient_id=my_patient["id"]))
+        flash("No patient profile found for your account.", "warning")
+        return redirect(url_for("dashboard.overview"))
+
     q = request.args.get("q", "").strip()
     blood = request.args.get("blood", "").strip()
     gender = request.args.get("gender", "").strip()
@@ -45,13 +54,19 @@ def list_patients():
 
 @patients_bp.route("/<int:patient_id>")
 @login_required
-@roles_required("admin", "doctor", "receptionist")
+@roles_required("admin", "doctor", "receptionist", "patient")
 def view_patient(patient_id):
     db = get_db()
+    from app.auth.utils import current_user
+    user = current_user()
     patient = db.execute("SELECT * FROM patients WHERE id = ?", (patient_id,)).fetchone()
     if not patient:
         flash("Patient not found.", "danger")
         return redirect(url_for("patients.list_patients"))
+
+    if user and user["role"] == "patient" and patient["user_id"] != user["id"]:
+        flash("Access denied. You can only view your own patient profile.", "danger")
+        return redirect(url_for("dashboard.overview"))
 
     records = db.execute(
         """

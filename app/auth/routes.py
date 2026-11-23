@@ -12,9 +12,12 @@ purely to demonstrate what this file deliberately avoids.
 """
 
 import hashlib
+import logging
 import secrets
 import time
 from collections import defaultdict
+
+logger = logging.getLogger("medicore.auth")
 
 _LOGIN_ATTEMPTS = defaultdict(list)
 _RATE_WINDOW = 15 * 60
@@ -75,6 +78,7 @@ def login():
         key = _rate_key(email, ip)
 
         if _is_rate_limited(key):
+            logger.warning(f"Login rate limited for email '{email}' from IP '{ip}'.")
             flash("Too many failed login attempts. Please try again later.", "danger")
             return render_template("auth/login.html")
 
@@ -86,10 +90,12 @@ def login():
 
         if user and check_password_hash(user["password_hash"], password):
             if not user["is_active"]:
+                logger.warning(f"Inactive account login attempt for email '{email}' from IP '{ip}'.")
                 flash("This account is inactive. Contact an administrator.", "danger")
                 return render_template("auth/login.html")
 
             _reset(key)
+            logger.info(f"Successful login for user '{user['email']}' (role: {user['role']}) from IP '{ip}'.")
             token = create_session(user["id"])
             resp = make_response(redirect(next_url or url_for("dashboard.overview")))
             resp.set_cookie(
@@ -104,6 +110,7 @@ def login():
             return resp
 
         _record_failure(key)
+        logger.warning(f"Failed login attempt for email '{email}' from IP '{ip}'.")
         flash("Invalid email or password.", "danger")
 
     return render_template("auth/login.html")

@@ -1,18 +1,192 @@
 {% extends "base.html" %}
 {% block title %}Dashboard Overview — MediCore{% endblock %}
-{% block page_title %}Clinical Dashboard Overview{% endblock %}
+{% block page_title %}{{ "My Patient Health Portal" if user.role == 'patient' else ("Doctor Clinical Dashboard" if user.role == 'doctor' else "Clinical Dashboard Overview") }}{% endblock %}
 
 {% block content %}
+{% if user.role == 'patient' %}
+<!-- Patient Personal Health Portal View -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-4">
+    <div class="card-surface h-100">
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="user-avatar-sm" style="width: 48px; height: 48px; font-size: 1.15rem; background: var(--green-50); color: var(--green-700); border: 1px solid var(--green-200);">
+          {{ user.full_name[:2]|upper }}
+        </div>
+        <div>
+          <h5 class="fw-bold mb-0 text-dark">{{ user.full_name }}</h5>
+          <span class="badge bg-success-subtle text-success border border-success-subtle mt-1">Verified Patient</span>
+        </div>
+      </div>
+      <ul class="list-group list-group-flush small mb-3">
+        <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+          <span class="text-muted">Blood Group:</span>
+          {% if patient and patient.blood_group %}
+          <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2">{{ patient.blood_group }}</span>
+          {% else %}
+          <span>—</span>
+          {% endif %}
+        </li>
+        <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+          <span class="text-muted">Date of Birth:</span>
+          <strong>{{ patient.date_of_birth if patient and patient.date_of_birth else "—" }}</strong>
+        </li>
+        <li class="list-group-item px-0 py-2 d-flex justify-content-between">
+          <span class="text-muted">Contact Phone:</span>
+          <span class="font-monospace">{{ patient.phone if patient and patient.phone else "—" }}</span>
+        </li>
+        <li class="list-group-item px-0 py-2">
+          <div class="text-muted mb-1">Residential Address:</div>
+          <div class="text-dark fw-medium">{{ patient.address if patient and patient.address else "—" }}</div>
+        </li>
+      </ul>
+      <a href="{{ url_for('appointments.new_appointment') }}" class="btn-primary-brand w-100 justify-content-center py-2">
+        <i class="bi bi-plus-circle"></i> Add Appointment
+      </a>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Appointments</span>
+            <div class="stat-icon icon-teal"><i class="bi bi-calendar2-check"></i></div>
+          </div>
+          <div class="stat-value">{{ stats.total_appointments }}</div>
+          <div class="stat-subtext">Total visits booked</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Upcoming</span>
+            <div class="stat-icon icon-indigo"><i class="bi bi-clock"></i></div>
+          </div>
+          <div class="stat-value text-primary">{{ stats.upcoming_visits }}</div>
+          <div class="stat-subtext">Active consultations</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Completed</span>
+            <div class="stat-icon icon-blue"><i class="bi bi-check2-circle"></i></div>
+          </div>
+          <div class="stat-value text-success">{{ stats.completed_visits }}</div>
+          <div class="stat-subtext">Past consultations</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Medical Records</span>
+            <div class="stat-icon icon-amber"><i class="bi bi-file-earmark-medical"></i></div>
+          </div>
+          <div class="stat-value">{{ stats.medical_records }}</div>
+          <div class="stat-subtext">Prescriptions &amp; Rx</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Patient Appointments -->
+    <div class="card-surface mb-4">
+      <div class="card-header-flex">
+        <h6 class="card-header-title"><i class="bi bi-calendar2-week text-teal"></i> My Appointments</h6>
+        <a href="{{ url_for('appointments.new_appointment') }}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-plus-circle"></i> Add Appointment
+        </a>
+      </div>
+      <div class="table-responsive-clean">
+        <table class="table-clean">
+          <thead>
+            <tr>
+              <th>Doctor</th>
+              <th>Department</th>
+              <th>Date &amp; Time</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for a in patient_appts %}
+            <tr>
+              <td class="table-cell-title">{{ a.doctor_name }}</td>
+              <td>{{ a.department_name or "General" }}</td>
+              <td class="small text-muted">{{ a.scheduled_at }}</td>
+              <td><span class="badge-status badge-{{ a.status }}">{{ a.status }}</span></td>
+              <td>
+                {% if a.status in ['pending', 'confirmed'] %}
+                <form method="post" action="{{ url_for('appointments.update_status', appt_id=a.id, new_status='cancelled') }}" class="d-inline" onsubmit="return confirm('Cancel this appointment?');">
+                  {% include "_csrf.html" %}
+                  <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-2" title="Cancel Appointment">
+                    <i class="bi bi-x-circle"></i> Cancel
+                  </button>
+                </form>
+                {% else %}
+                <span class="text-muted small">—</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-muted text-center py-3">No appointments found.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Patient Medical History -->
+    <div class="card-surface">
+      <div class="card-header-flex">
+        <h6 class="card-header-title"><i class="bi bi-file-earmark-medical text-teal"></i> My Medical Records &amp; Prescriptions</h6>
+      </div>
+      <div class="table-responsive-clean">
+        <table class="table-clean">
+          <thead>
+            <tr>
+              <th>Visit Date</th>
+              <th>Doctor</th>
+              <th>Diagnosis</th>
+              <th>Prescription</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for r in patient_records %}
+            <tr>
+              <td class="small text-muted">{{ r.visit_date }}</td>
+              <td>{{ r.doctor_name }}</td>
+              <td class="table-cell-title">{{ r.diagnosis or "Clinical checkup" }}</td>
+              <td class="small font-monospace">{{ r.prescription or "—" }}</td>
+              <td>
+                <a href="{{ url_for('records.view_record', record_id=r.id) }}" class="btn btn-sm btn-outline-secondary py-0 px-2" title="View Full Clinical Chart">
+                  <i class="bi bi-eye"></i> View
+                </a>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-muted text-center py-3">No medical records on file.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<!-- Clinical / Administrator / Receptionist Overview -->
 <!-- Metric Cards Row -->
 <div class="row g-3 mb-4">
   <div class="col-sm-6 col-xl-3">
     <div class="stat-card">
       <div class="stat-header">
-        <span class="stat-label">Total Patients</span>
+        <span class="stat-label">{{ "My Assigned Patients" if user.role == 'doctor' else "Total Patients" }}</span>
         <div class="stat-icon icon-teal"><i class="bi bi-people"></i></div>
       </div>
-      <div class="stat-value">{{ stats.total_patients }}</div>
-      <div class="stat-subtext">Registered clinical records</div>
+      <div class="stat-value">{{ stats.my_patients if user.role == 'doctor' else stats.total_patients }}</div>
+      <div class="stat-subtext">{{ "Under your active care" if user.role == 'doctor' else "Registered clinical records" }}</div>
     </div>
   </div>
 
@@ -30,10 +204,10 @@
   <div class="col-sm-6 col-xl-3">
     <div class="stat-card">
       <div class="stat-header">
-        <span class="stat-label">Today's Visits</span>
+        <span class="stat-label">{{ "My Visits Today" if user.role == 'doctor' else "Today's Visits" }}</span>
         <div class="stat-icon icon-indigo"><i class="bi bi-calendar2-day"></i></div>
       </div>
-      <div class="stat-value">{{ stats.today_appointments }}</div>
+      <div class="stat-value">{{ stats.my_today if user.role == 'doctor' else stats.today_appointments }}</div>
       <div class="stat-subtext">Scheduled consultations</div>
     </div>
   </div>
@@ -111,7 +285,7 @@
   <div class="card-header-flex">
     <h6 class="card-header-title"><i class="bi bi-activity text-teal"></i> Recent Clinic Activity &amp; Consultations</h6>
     <a href="{{ url_for('appointments.new_appointment') }}" class="btn-primary-brand py-1 px-3 text-xs">
-      <i class="bi bi-plus-lg"></i> Schedule Visit
+      <i class="bi bi-plus-circle"></i> Add Appointment
     </a>
   </div>
   <div class="table-responsive-clean">
@@ -141,6 +315,7 @@
     </table>
   </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -154,7 +329,7 @@
           labels: [{% for s in status_counts %}"{{ s.status|capitalize }}",{% endfor %}],
           datasets: [{
             data: [{% for s in status_counts %}{{ s.c }},{% endfor %}],
-            backgroundColor: ['#D97706', '#0D9488', '#0F172A', '#E11D48'],
+            backgroundColor: ['#D97706', '#16A34A', '#0F172A', '#DC2626'],
             borderWidth: 2,
             borderColor: '#FFFFFF'
           }]

@@ -37,9 +37,11 @@ def list_records():
 
 @records_bp.route("/<int:record_id>")
 @login_required
-@roles_required("admin", "doctor")
+@roles_required("admin", "doctor", "patient")
 def view_record(record_id):
     db = get_db()
+    from app.auth.utils import current_user
+    user = current_user()
     record = db.execute(
         """
         SELECT mr.*, p.full_name AS patient_name, p.date_of_birth, p.gender, p.blood_group, p.phone AS patient_phone,
@@ -56,6 +58,12 @@ def view_record(record_id):
     if not record:
         flash("Medical record not found.", "danger")
         return redirect(url_for("records.list_records"))
+
+    if user and user["role"] == "patient":
+        my_patient = db.execute("SELECT id FROM patients WHERE user_id = ?", (user["id"],)).fetchone()
+        if not my_patient or record["patient_id"] != my_patient["id"]:
+            flash("Access denied. You can only view your own medical records.", "danger")
+            return redirect(url_for("dashboard.overview"))
 
     return render_template("records/view.html", record=record)
 
