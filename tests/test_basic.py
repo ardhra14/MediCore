@@ -582,6 +582,62 @@ class MediCoreTestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b"do not have permission", resp.data)
 
+    def test_login_credential_verification_and_rejection(self):
+        # 1. Empty email or password
+        resp = self.client.post("/login", data={"email": "", "password": ""}, follow_redirects=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Please enter both email and password", resp.data)
+
+        # 2. Random nonexistent credentials rejected
+        resp = self.client.post(
+            "/login",
+            data={"email": "attacker@unknown-domain.com", "password": "RandomPassword123!"},
+            follow_redirects=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Invalid email or password", resp.data)
+
+        # 3. Existing user with wrong password rejected
+        resp = self.client.post(
+            "/login",
+            data={"email": "admin@medicore.test", "password": "WrongPassword999!"},
+            follow_redirects=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Invalid email or password", resp.data)
+
+        # 4. Random credentials when session cookie is present must NOT authenticate
+        # First sign in as admin
+        self.login_as_admin()
+        # Verify authenticated
+        resp = self.client.get("/dashboard", follow_redirects=True)
+        self.assertIn(b"Overview", resp.data)
+
+        # Attempt to post random credentials while session exists
+        resp = self.client.post(
+            "/login",
+            data={"email": "random.user@external.com", "password": "badpassword123"},
+            follow_redirects=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Invalid email or password", resp.data)
+        self.assertNotIn(b"Welcome back, Ardhra", resp.data)
+
+        # Confirm the session was revoked and visiting protected dashboard is denied
+        resp = self.client.get("/dashboard", follow_redirects=False)
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login", resp.headers.get("Location", ""))
+
+        # 5. Legitimate credentials authenticate properly
+        resp = self.client.post(
+            "/login",
+            data={"email": "admin@medicore.test", "password": "Passw0rd!"},
+            follow_redirects=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Overview", resp.data)
+        self.assertIn(b"Welcome back, Ardhra", resp.data)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -68,31 +68,50 @@ auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
-    if current_user():
-        return redirect(url_for("dashboard.overview"))
-
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         ip = request.remote_addr or "unknown"
         key = _rate_key(email, ip)
 
+        # Invalidate any prior session cookie immediately on login attempt
+        prev_token = request.cookies.get(SESSION_COOKIE_NAME)
+        if prev_token:
+            revoke_session(prev_token)
+
+        # Strict validation: both email and password are required
+        if not email or not password:
+            flash("Please enter both email and password.", "danger")
+            resp = make_response(render_template("auth/login.html"))
+            if prev_token:
+                resp.delete_cookie(SESSION_COOKIE_NAME)
+            return resp
+
+        # Check server-side rate limiting
         if _is_rate_limited(key):
             logger.warning(f"Login rate limited for email '{email}' from IP '{ip}'.")
             flash("Too many failed login attempts. Please try again later.", "danger")
-            return render_template("auth/login.html")
+            resp = make_response(render_template("auth/login.html"))
+            if prev_token:
+                resp.delete_cookie(SESSION_COOKIE_NAME)
+            return resp
 
+        # Query user strictly from the database
         user = get_user_by_email(email)
 
         next_url = request.args.get("next")
         if next_url and urlparse(next_url).netloc:
             next_url = None
 
+        # Verify credentials strictly against the database hash
         if user and check_password_hash(user["password_hash"], password):
             if not user["is_active"]:
                 logger.warning(f"Inactive account login attempt for email '{email}' from IP '{ip}'.")
                 flash("This account is inactive. Contact an administrator.", "danger")
-                return render_template("auth/login.html")
+                resp = make_response(render_template("auth/login.html"))
+                if prev_token:
+                    resp.delete_cookie(SESSION_COOKIE_NAME)
+                return resp
 
             _reset(key)
             logger.info(f"Successful login for user '{user['email']}' (role: {user['role']}) from IP '{ip}'.")
@@ -109,9 +128,18 @@ def login():
             flash(f"Welcome back, {user['full_name']}.", "success")
             return resp
 
+        # Authentication failed: reject invalid or random credentials
         _record_failure(key)
         logger.warning(f"Failed login attempt for email '{email}' from IP '{ip}'.")
         flash("Invalid email or password.", "danger")
+        resp = make_response(render_template("auth/login.html"))
+        if prev_token:
+            resp.delete_cookie(SESSION_COOKIE_NAME)
+        return resp
+
+    # GET request: redirect only if user is already authenticated
+    if current_user():
+        return redirect(url_for("dashboard.overview"))
 
     return render_template("auth/login.html")
 

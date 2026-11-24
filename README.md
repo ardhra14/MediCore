@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Database-SQLite%203-003B57?logo=sqlite&logoColor=white" alt="SQLite 3">
   <img src="https://img.shields.io/badge/UI-Bootstrap%205.3%20%7C%20Chart.js-purple" alt="Bootstrap 5.3">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License">
-  <img src="https://img.shields.io/badge/Tests-18%20Passed-success" alt="Tests Passed">
+  <img src="https://img.shields.io/badge/Tests-19%20Passed-success" alt="Tests Passed">
 </p>
 
 ---
@@ -202,7 +202,7 @@ For complete reproduction walkthroughs, refer to [`docs/security_testing.md`](do
 | **Backend** | Python 3.9+, Flask 3.0+ | Modular Flask Blueprint architecture |
 | **Security** | Werkzeug 3.0+ | PBKDF2-HMAC-SHA256 password hashing, CSPRNG tokens, rate limiting |
 | **Database** | SQLite 3 | 10 relational tables with cascading foreign keys (`PRAGMA foreign_keys = ON`) |
-| **Testing** | Python `unittest` &amp; `pytest` | 18 automated tests covering auth, RBAC, CRUD, and lab flows |
+| **Testing** | Python `unittest` &amp; `pytest` | 19 automated tests covering auth, RBAC, CRUD, and lab flows |
 
 ---
 
@@ -280,13 +280,11 @@ All pre-seeded test accounts use the password: **`Passw0rd!`**
 | **Patient** | Reshma Susan Cherian | `reshma.cherian@medicore.test` | Outpatient (#PT-0004) |
 | **Patient** | Vinu Balakrishnan | `vinu.balakrishnan@medicore.test` | Outpatient (#PT-0005) |
 
-*(The login page includes quick-fill buttons for one-click testing of each role).*
-
 ---
 
 ## Running Automated Tests
 
-MediCore includes an automated 18-point unit test suite verifying:
+MediCore includes an automated 19-point unit test suite verifying:
 - Public pages and interactive contact forms
 - User registration, login, session issuance, and logout
 - Login rate-limiting and temporary account lockout
@@ -350,7 +348,7 @@ MediCore/
 │   ├── broken_password_recovery/   # CWE-640 / CWE-330 predictable reset token lab
 │   └── insecure_session_management/# CWE-384 / CWE-330 guessable sequential session lab
 ├── tests/
-│   └── test_basic.py               # Comprehensive 18-point test suite
+│   └── test_basic.py               # Comprehensive 19-point test suite
 ├── .env.example                    # Environment variable template
 ├── .gitignore                      # Git exclusion rules (ignores database and secrets)
 ├── CONTRIBUTING.md                 # Contribution and security lab guidelines

@@ -12,13 +12,13 @@
     <h1>Welcome Back</h1>
     <p class="auth-subtext">Access your MediCore clinical and administration portal</p>
 
-    <form method="post" id="loginForm">
+    <form method="post" id="loginForm" autocomplete="off">
       {% include "_csrf.html" %}
       <div class="mb-3">
         <label class="form-label">Email Address</label>
         <div class="input-group">
           <span class="input-group-text bg-white text-muted"><i class="bi bi-envelope"></i></span>
-          <input class="form-control" type="email" name="email" id="emailInput" required placeholder="name@medicore.test">
+          <input class="form-control" type="email" name="email" id="emailInput" required autocomplete="off" value="">
         </div>
       </div>
 
@@ -29,7 +29,7 @@
         </div>
         <div class="input-group mt-1">
           <span class="input-group-text bg-white text-muted"><i class="bi bi-lock"></i></span>
-          <input class="form-control" type="password" name="password" id="passwordInput" required placeholder="••••••••">
+          <input class="form-control" type="password" name="password" id="passwordInput" required autocomplete="current-password" value="">
         </div>
       </div>
 
@@ -42,37 +42,6 @@
       <span>Need an account?</span>
       <a href="{{ url_for('auth.register') }}" class="fw-medium text-teal">Register as Patient</a>
     </div>
-
-    <!-- Quick Fill Helper for Evaluation -->
-    <div class="mt-4 p-3 rounded border" style="background: var(--slate-50);">
-      <div class="fw-semibold text-dark small mb-2 d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-lightning-charge text-teal"></i> Evaluation Quick-Fill:</span>
-        <span class="badge bg-light text-muted border">Password: Passw0rd!</span>
-      </div>
-      <div class="d-flex flex-wrap gap-1">
-        <button type="button" class="btn btn-sm btn-outline-secondary text-xs" onclick="quickFill('admin@medicore.test')">
-          <i class="bi bi-shield-lock"></i> Admin (Ardhra)
-        </button>
-        <button type="button" class="btn btn-sm btn-outline-secondary text-xs" onclick="quickFill('dr.harikrishnan@medicore.test')">
-          <i class="bi bi-heart-pulse"></i> Doctor (Dr. Harikrishnan)
-        </button>
-        <button type="button" class="btn btn-sm btn-outline-secondary text-xs" onclick="quickFill('sneha.menachery@medicore.test')">
-          <i class="bi bi-person-badge"></i> Receptionist (Sneha)
-        </button>
-        <button type="button" class="btn btn-sm btn-outline-secondary text-xs" onclick="quickFill('eldho.paulose@medicore.test')">
-          <i class="bi bi-person"></i> Patient (Eldho)
-        </button>
-      </div>
-    </div>
   </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-  function quickFill(email) {
-    document.getElementById('emailInput').value = email;
-    document.getElementById('passwordInput').value = 'Passw0rd!';
-  }
-</script>
 {% endblock %}
