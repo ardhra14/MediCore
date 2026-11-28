@@ -40,9 +40,17 @@ def create_app(config_object=Config):
     if app.config.get("SECURITY_LAB_ENABLED", False):
         from security_lab.broken_password_recovery.routes import vuln_recovery_bp
         from security_lab.insecure_session_management.routes import vuln_session_bp
+        from security_lab.vulnerable_2fa.routes import vuln_2fa_bp
+        from security_lab.rate_limit_bypass.routes import vuln_rate_limit_bp
+        from security_lab.jwt_vulnerabilities.routes import vuln_jwt_bp
+        from security_lab.information_disclosure.routes import vuln_info_bp
 
         app.register_blueprint(vuln_recovery_bp)
         app.register_blueprint(vuln_session_bp)
+        app.register_blueprint(vuln_2fa_bp)
+        app.register_blueprint(vuln_rate_limit_bp)
+        app.register_blueprint(vuln_jwt_bp)
+        app.register_blueprint(vuln_info_bp)
 
     @app.after_request
     def set_security_headers(response):

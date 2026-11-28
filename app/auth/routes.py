@@ -114,6 +114,28 @@ def login():
                 return resp
 
             _reset(key)
+
+            # Check if user has Two-Factor Authentication (2FA) enabled
+            user_keys = user.keys() if hasattr(user, "keys") else []
+            has_2fa = bool(user["two_factor_enabled"]) if "two_factor_enabled" in user_keys else False
+
+            if has_2fa:
+                otp_code = f"{secrets.randbelow(900000) + 100000:06d}"
+                expires_at = (datetime.utcnow() + timedelta(minutes=5)).isoformat()
+                db = get_db()
+                db.execute(
+                    "INSERT INTO otp_codes (user_id, otp_code, expires_at) VALUES (?, ?, ?)",
+                    (user["id"], otp_code, expires_at),
+                )
+                db.commit()
+
+                from flask import session as flask_session
+                flask_session["pending_2fa_user_id"] = user["id"]
+                flask_session["pending_2fa_next"] = next_url
+                logger.info(f"Two-factor OTP generated for user '{user['email']}'.")
+                flash(f"A 2FA verification code has been issued: {otp_code} (Valid for 5 minutes).", "info")
+                return redirect(url_for("auth.verify_2fa"))
+
             logger.info(f"Successful login for user '{user['email']}' (role: {user['role']}) from IP '{ip}'.")
             token = create_session(user["id"])
             resp = make_response(redirect(next_url or url_for("dashboard.overview")))
@@ -142,6 +164,69 @@ def login():
         return redirect(url_for("dashboard.overview"))
 
     return render_template("auth/login.html")
+
+
+@auth_bp.route("/verify-2fa", methods=["GET", "POST"])
+def verify_2fa():
+    from flask import session as flask_session
+    user_id = flask_session.get("pending_2fa_user_id")
+    if not user_id:
+        flash("No two-factor verification challenge is pending. Please sign in.", "warning")
+        return redirect(url_for("auth.login"))
+
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not user:
+        flask_session.pop("pending_2fa_user_id", None)
+        return redirect(url_for("auth.login"))
+
+    ip = request.remote_addr or "unknown"
+    otp_key = f"otp|{user['email']}|{ip}"
+
+    if request.method == "POST":
+        # Working rate limiting on OTP verification
+        if _is_rate_limited(otp_key):
+            logger.warning(f"OTP rate limited for user '{user['email']}' from IP '{ip}'.")
+            flash("Too many failed OTP verification attempts. Please wait 15 minutes before trying again.", "danger")
+            return render_template("auth/verify_2fa.html", email=user["email"])
+
+        code = request.form.get("otp_code", "").strip()
+        if not code:
+            flash("Please enter the 6-digit verification code.", "danger")
+            return render_template("auth/verify_2fa.html", email=user["email"])
+
+        now_str = datetime.utcnow().isoformat()
+        otp_record = db.execute(
+            "SELECT * FROM otp_codes WHERE user_id = ? AND otp_code = ? AND used = 0 AND expires_at > ? ORDER BY id DESC LIMIT 1",
+            (user_id, code, now_str),
+        ).fetchone()
+
+        if otp_record:
+            db.execute("UPDATE otp_codes SET used = 1 WHERE id = ?", (otp_record["id"],))
+            db.commit()
+            _reset(otp_key)
+            next_url = flask_session.pop("pending_2fa_next", None)
+            flask_session.pop("pending_2fa_user_id", None)
+
+            token = create_session(user["id"])
+            resp = make_response(redirect(next_url or url_for("dashboard.overview")))
+            resp.set_cookie(
+                SESSION_COOKIE_NAME,
+                token,
+                httponly=True,
+                samesite=current_app.config.get("SESSION_COOKIE_SAMESITE", "Lax"),
+                secure=current_app.config.get("SESSION_COOKIE_SECURE", request.is_secure),
+                max_age=current_app.config.get("PERMANENT_SESSION_LIFETIME", 60 * 60 * 8),
+            )
+            flash(f"Two-factor authentication verified. Welcome back, {user['full_name']}.", "success")
+            return resp
+
+        # Invalid OTP submission
+        _record_failure(otp_key)
+        logger.warning(f"Invalid OTP attempt for user '{user['email']}' from IP '{ip}'.")
+        flash("Invalid or expired 2FA code. Please check and try again.", "danger")
+
+    return render_template("auth/verify_2fa.html", email=user["email"])
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])

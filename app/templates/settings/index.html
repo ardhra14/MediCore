@@ -80,6 +80,45 @@
         </div>
       </form>
     </div>
+
+    <!-- Two-Factor Authentication (2FA) Card -->
+    <div class="card-surface">
+      <div class="card-header-flex">
+        <h6 class="card-header-title"><i class="bi bi-phone text-teal"></i> Two-Factor Authentication (2FA)</h6>
+        {% if user.two_factor_enabled %}
+          <span class="badge bg-success-subtle text-success border border-success-subtle">Active</span>
+        {% else %}
+          <span class="badge bg-secondary-subtle text-secondary border">Disabled</span>
+        {% endif %}
+      </div>
+      <p class="small text-muted mb-3">
+        Strengthen your account security by requiring a 6-digit one-time verification code (OTP) at each login.
+      </p>
+      <div class="d-flex justify-content-between align-items-center p-3 rounded border" style="background: var(--slate-50);">
+        <div>
+          <div class="fw-semibold text-dark small">OTP Security Verification</div>
+          <div class="text-muted" style="font-size: 0.78rem;">
+            {% if user.two_factor_enabled %}
+              Two-factor challenge is currently enforced on sign in.
+            {% else %}
+              Standard password-only authentication is currently active.
+            {% endif %}
+          </div>
+        </div>
+        <form method="post" action="{{ url_for('settings.toggle_2fa') }}">
+          {% include "_csrf.html" %}
+          {% if user.two_factor_enabled %}
+            <button class="btn btn-sm btn-outline-danger" type="submit">
+              <i class="bi bi-shield-x"></i> Disable 2FA
+            </button>
+          {% else %}
+            <button class="btn btn-sm btn-success text-white" type="submit">
+              <i class="bi bi-shield-check"></i> Enable 2FA
+            </button>
+          {% endif %}
+        </form>
+      </div>
+    </div>
   </div>
 
   <div class="col-lg-5">

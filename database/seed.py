@@ -47,7 +47,7 @@ def build():
 
     users = [
         ("Ardhra", "admin@medicore.test", pw, "admin"),
-        ("Dr. Harikrishnan Nair", "dr.harikrishnan@medicore.test", pw, "doctor"),
+        ("Dr. Siddharth Menon", "dr.siddharth@medicore.test", pw, "doctor"),
         ("Dr. Ananya Kurian", "dr.ananya@medicore.test", pw, "doctor"),
         ("Dr. Mathew Varghese", "dr.mathew@medicore.test", pw, "doctor"),
         ("Dr. Fathima Beevi", "dr.fathima@medicore.test", pw, "doctor"),
@@ -58,6 +58,7 @@ def build():
         ("Karthik Namboodiri", "karthik.namboodiri@medicore.test", pw, "patient"),
         ("Reshma Susan Cherian", "reshma.cherian@medicore.test", pw, "patient"),
         ("Vinu Balakrishnan", "vinu.balakrishnan@medicore.test", pw, "patient"),
+        ("Dr. Harikrishnan Nair", "dr.harikrishnan@medicore.test", pw, "doctor"),
     ]
     cur.executemany(
         "INSERT INTO users (full_name, email, password_hash, role) VALUES (?, ?, ?, ?)",
@@ -70,6 +71,7 @@ def build():
         (3, 2, "Pediatric & Neonatal Care", "+91 98471 33022", "Mon-Thu 08:30 - 14:30"),
         (4, 3, "Orthopedic Surgery & Arthroscopy", "+91 94952 88103", "Tue-Sat 10:00 - 17:00"),
         (5, 4, "Clinical & Aesthetic Dermatology", "+91 98953 44094", "Wed-Fri 09:30 - 15:30"),
+        (13, 1, "Cardiology Consultations", "+91 94470 12042", "Sat 10:00 - 14:00"),
     ]
     cur.executemany(
         "INSERT INTO doctors (user_id, department_id, specialty, phone, availability) "

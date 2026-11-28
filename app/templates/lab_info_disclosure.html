@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Information Disclosure Lab — MediCore{% endblock %}
+{% block public_content %}
+<div class="public-wrapper py-5">
+  <div class="card-surface mx-auto" style="max-width: 880px;">
+    <div class="card-header-flex">
+      <h6 class="card-header-title mb-0">
+        <i class="bi bi-eye text-danger"></i> Information Disclosure Security Lab
+      </h6>
+      <span class="badge bg-danger-subtle text-danger border border-danger-subtle">CWE-200 / CWE-209</span>
+    </div>
+    <div class="p-4">
+      {% include "_flash.html" %}
+
+      <div class="alert alert-warning small mb-4">
+        <strong><i class="bi bi-info-circle-fill"></i> Lab Objective:</strong>
+        This endpoint simulates an improperly exposed internal diagnostics/status route. It leaks sensitive server execution environments, absolute filesystem paths, application configuration flags, internal database architecture, and routing blueprints.
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold small text-dark mb-0">Disclosed Application &amp; Server Metadata</h6>
+        <a href="{{ url_for('vuln_info.diagnostics', format='json') }}" class="btn btn-outline-danger btn-sm" target="_blank">
+          <i class="bi bi-filetype-json"></i> View Raw JSON Output
+        </a>
+      </div>
+
+      <!-- Section 1: Server Paths & Host Environment -->
+      <div class="card p-3 bg-light border mb-3">
+        <h6 class="fw-bold text-dark small mb-2"><i class="bi bi-hdd-network text-teal"></i> Server Environment &amp; Host Paths</h6>
+        <div class="row g-2 small">
+          <div class="col-sm-4 text-muted">Platform:</div>
+          <div class="col-sm-8 font-monospace">{{ metadata.server_environment.platform }}</div>
+          <div class="col-sm-4 text-muted">Python Executable:</div>
+          <div class="col-sm-8 font-monospace text-break text-danger">{{ metadata.server_environment.python_executable }}</div>
+          <div class="col-sm-4 text-muted">Working Directory:</div>
+          <div class="col-sm-8 font-monospace text-break text-danger">{{ metadata.server_environment.working_directory }}</div>
+          <div class="col-sm-4 text-muted">Process ID:</div>
+          <div class="col-sm-8 font-monospace">{{ metadata.server_environment.process_id }}</div>
+        </div>
+      </div>
+
+      <!-- Section 2: Application Configuration -->
+      <div class="card p-3 bg-light border mb-3">
+        <h6 class="fw-bold text-dark small mb-2"><i class="bi bi-sliders text-teal"></i> Internal Configuration &amp; Cookies</h6>
+        <div class="row g-2 small">
+          <div class="col-sm-4 text-muted">Database File Path:</div>
+          <div class="col-sm-8 font-monospace text-break">{{ metadata.application_configuration.database_path }}</div>
+          <div class="col-sm-4 text-muted">Session Cookie Name:</div>
+          <div class="col-sm-8 font-monospace"><code>{{ metadata.application_configuration.session_cookie_name }}</code></div>
+          <div class="col-sm-4 text-muted">Session Lifetime:</div>
+          <div class="col-sm-8 font-monospace">{{ metadata.application_configuration.permanent_session_lifetime_sec }} seconds</div>
+          <div class="col-sm-4 text-muted">Debug Mode:</div>
+          <div class="col-sm-8 font-monospace">{{ metadata.application_configuration.debug_mode }}</div>
+        </div>
+      </div>
+
+      <!-- Section 3: Database Internals -->
+      <div class="card p-3 bg-light border mb-3">
+        <h6 class="fw-bold text-dark small mb-2"><i class="bi bi-database text-teal"></i> Database Tables &amp; Record Counts</h6>
+        <div class="small">
+          <div class="text-muted mb-2">Internal SQLite schema tables identified:</div>
+          <div class="d-flex flex-wrap gap-2">
+            {% for tbl, cnt in metadata.database_internals.table_record_counts.items() %}
+              <span class="badge bg-white text-dark border p-2 font-monospace">
+                {{ tbl }} ({{ cnt }} records)
+              </span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: Routing Map -->
+      <div class="card p-3 bg-light border">
+        <h6 class="fw-bold text-dark small mb-2"><i class="bi bi-diagram-2 text-teal"></i> Disclosed Application Routing Map (Sample)</h6>
+        <div class="table-responsive small">
+          <table class="table table-sm table-bordered bg-white mb-0" style="font-size: 0.75rem;">
+            <thead>
+              <tr class="table-light">
+                <th>Route Rule</th>
+                <th>Endpoint</th>
+                <th>Allowed Methods</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in metadata.framework_routing_map[:10] %}
+                <tr>
+                  <td class="font-monospace text-primary">{{ r.rule }}</td>
+                  <td class="font-monospace">{{ r.endpoint }}</td>
+                  <td>{{ r.methods | join(', ') }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="pt-3 mt-4 border-top text-muted small">
+        <strong>Remediation:</strong> Remove debug and diagnostic endpoints before production deployment, restrict technical diagnostics behind mutual TLS or internal administrative VPNs, and disable detailed framework error traces in production.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

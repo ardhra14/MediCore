@@ -103,6 +103,78 @@ sessions for a user on logout or password change.
 
 ---
 
+## Vulnerability 3 — Two-Factor Authentication (2FA) Bypass (CWE-304, CWE-287)
+
+**Location:** `security_lab/vulnerable_2fa/` (`/lab/2fa`)
+
+### What's broken
+The secondary OTP verification endpoint accepts multiple bypass mechanisms:
+1. **Header-based bypass**: Sending `X-Bypass-2FA: true` skips the OTP verification step completely.
+2. **Master magic code**: Submitting `000000` or `888888` is unconditionally treated as valid.
+3. **Parameter tampering / Step-skipping**: Appending `?skip_2fa=1` bypasses the check.
+
+### Reproduction steps
+1. Sign in via `/lab/2fa/login` with any lab account (e.g. `eldho.paulose@medicore.test` / `Passw0rd!`).
+2. On `/lab/2fa/verify`, enter OTP `000000` or send header `X-Bypass-2FA: true`.
+3. Observe full access granted to `/lab/2fa/portal` without entering the target user's OTP.
+
+### Recommended fix
+Verify OTP cryptographically against server-side session state, bind single-use tokens to verified credentials, and reject all unrecognized bypass headers and magic codes.
+
+---
+
+## Vulnerability 4 — Rate Limit Bypass & Missing Rate Limiting (CWE-307)
+
+**Location:** `security_lab/rate_limit_bypass/` (`/lab/rate-limit`)
+
+### What's broken
+1. `/lab/rate-limit/verify-otp-vulnerable`: Completely lacks rate limiting, allowing rapid automated brute-force attacks against the 4-digit PIN (`4281`).
+2. `/lab/rate-limit/verify-otp-header-bypass`: Enforces rate limits using the untrusted, client-supplied `X-Forwarded-For` header. Rotating the IP bypasses lockout counters.
+
+### Reproduction steps
+1. Send rapid requests to `/lab/rate-limit/verify-otp-vulnerable` with a script or Burp Intruder. Observe no 429 lockout occurs.
+2. Send 5 failed requests to `/lab/rate-limit/verify-otp-header-bypass` with `X-Forwarded-For: 10.0.0.1`, then change to `X-Forwarded-For: 10.0.0.2` to bypass the 429 lockout.
+
+### Recommended fix
+Enforce server-side rate limiting on all authentication and OTP endpoints using real remote socket addresses, progressive delays, and account lockouts.
+
+---
+
+## Vulnerability 5 — JWT Signature Bypass & Privilege Escalation (CWE-347, CWE-345)
+
+**Location:** `security_lab/jwt_vulnerabilities/` (`/lab/jwt`)
+
+### What's broken
+The JWT validator accepts tokens signed with `alg: "none"` and skips cryptographic signature validation entirely. A regular patient can decode their token, alter `"isAdmin": false` to `"isAdmin": true`, set `"alg": "none"`, and submit the token to gain full administrative access to `/lab/jwt/admin`.
+
+### Reproduction steps
+1. Sign in via `/lab/jwt/login` as patient `eldho.paulose@medicore.test`.
+2. Access `/lab/jwt/admin` and receive HTTP 403 Forbidden.
+3. Use the Forge tool (or a script) to generate a token with header `{"typ": "JWT", "alg": "none"}` and payload `{"sub": 8, "name": "Eldho Paulose", "role": "admin", "isAdmin": true}`.
+4. Submit the forged token to `/lab/jwt/admin` via `Authorization: Bearer <token>`.
+5. Observe HTTP 200 OK and exposure of sensitive clinical administration telemetry.
+
+### Recommended fix
+Strictly whitelist allowed cryptographic algorithms (e.g. HS256 / RS256), reject tokens with `alg: "none"`, and verify cryptographic signatures before decoding or trusting claims.
+
+---
+
+## Vulnerability 6 — Technical Information Disclosure (CWE-200, CWE-209)
+
+**Location:** `security_lab/information_disclosure/` (`/lab/info-disclosure`)
+
+### What's broken
+An exposed diagnostic route (`/lab/info-disclosure/diagnostics`) reveals internal filesystem paths, Python interpreter paths, session configuration attributes, database table schemas, record counts, and the internal Flask routing map.
+
+### Reproduction steps
+1. Navigate to `/lab/info-disclosure/diagnostics` (or fetch with `?format=json`).
+2. Observe disclosure of server paths, operating system details, database internals, and routing maps.
+
+### Recommended fix
+Disable diagnostic endpoints in production, restrict administrative telemetry behind internal network boundaries, and ensure error handlers mask technical traces.
+
+---
+
 ## Disabling the lab
 
-Set `SECURITY_LAB_ENABLED=0` (the default) in `.env` or the environment to prevent both vulnerable blueprints from being registered at all — `create_app()` skips importing and mounting them entirely in that case.
+Set `SECURITY_LAB_ENABLED=0` (the default) in `.env` or the environment to prevent all vulnerable blueprints from being registered at all — `create_app()` skips importing and mounting them entirely in that case.

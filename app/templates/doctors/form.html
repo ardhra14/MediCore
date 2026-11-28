@@ -18,7 +18,7 @@
     {% include "_csrf.html" %}
     <div class="mb-3">
       <label class="form-label">Doctor Full Name <span class="text-danger">*</span></label>
-      <input class="form-control" name="full_name" value="{{ doctor.full_name if doctor else '' }}" required placeholder="e.g. Dr. Harikrishnan Nair">
+      <input class="form-control" name="full_name" value="{{ doctor.full_name if doctor else '' }}" required placeholder="e.g. Dr. Siddharth Menon">
     </div>
 
     {% if not doctor %}

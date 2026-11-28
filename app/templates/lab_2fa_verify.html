@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Verify 2FA Challenge — Security Lab{% endblock %}
+{% block public_content %}
+<div class="public-wrapper py-5">
+  <div class="card-surface mx-auto" style="max-width: 640px;">
+    <div class="card-header-flex">
+      <h6 class="card-header-title mb-0">
+        <i class="bi bi-shield-lock text-warning"></i> 2FA Verification Challenge
+      </h6>
+      <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Vulnerable Endpoint</span>
+    </div>
+    <div class="p-4">
+      {% include "_flash.html" %}
+
+      <div class="p-3 bg-light rounded border mb-4">
+        <div class="small fw-semibold text-dark">Target User: {{ user.full_name }} ({{ user.email }})</div>
+        <div class="small text-muted">Role: <span class="badge bg-dark">{{ user.role }}</span></div>
+      </div>
+
+      <form method="post" action="{{ url_for('vuln_2fa.verify') }}" class="mb-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Enter 6-Digit OTP Code</label>
+          <input class="form-control text-center fw-bold font-monospace fs-5" 
+                 type="text" 
+                 name="otp_code" 
+                 placeholder="000000" 
+                 maxlength="6" 
+                 required>
+          <div class="form-text small text-muted">
+            Enter the genuine code, or test the magic master bypass code <code>000000</code>.
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary btn-sm flex-fill py-2" type="submit">
+            <i class="bi bi-check2"></i> Submit Verification
+          </button>
+          <a href="{{ url_for('vuln_2fa.verify', skip_2fa=1) }}" class="btn btn-outline-danger btn-sm py-2">
+            <i class="bi bi-lightning-charge"></i> Exploit ?skip_2fa=1
+          </a>
+        </div>
+      </form>
+
+      <div class="bg-light p-3 rounded border small">
+        <div class="fw-bold text-dark mb-1"><i class="bi bi-terminal text-teal"></i> Test via cURL (Header Bypass):</div>
+        <pre class="bg-dark text-light p-2 rounded font-monospace small mb-0" style="font-size: 0.75rem;">curl -i -X POST http://127.0.0.1:5000/lab/2fa/verify \
+  -H "X-Bypass-2FA: true" \
+  -b "vuln_2fa_user_id={{ user.id }}"</pre>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

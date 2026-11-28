@@ -638,6 +638,168 @@ class MediCoreTestCase(unittest.TestCase):
         self.assertIn(b"Overview", resp.data)
         self.assertIn(b"Welcome back, Ardhra", resp.data)
 
+    # --- Two-Factor Authentication & Rate Limiting Tests --------------------
+    def test_two_factor_auth_flow_and_rate_limiting(self):
+        # Enable 2FA on admin user
+        with self.app.app_context():
+            from app.models.db import get_db
+            db = get_db()
+            db.execute("UPDATE users SET two_factor_enabled = 1 WHERE email = 'admin@medicore.test'")
+            db.commit()
+
+        # Login step 1: Valid password triggers 2FA challenge redirect
+        resp = self.client.post(
+            "/login",
+            data={"email": "admin@medicore.test", "password": "Passw0rd!"},
+            follow_redirects=False,
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/verify-2fa", resp.headers.get("Location", ""))
+
+        # Verify 2FA challenge page loads
+        resp = self.client.get("/verify-2fa")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Two-Factor Verification", resp.data)
+
+        # Invalid OTP rejected
+        resp = self.client.post("/verify-2fa", data={"otp_code": "999999"}, follow_redirects=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Invalid or expired 2FA code", resp.data)
+
+        # Fetch generated OTP from database
+        with self.app.app_context():
+            db = get_db()
+            otp_row = db.execute(
+                "SELECT * FROM otp_codes WHERE user_id = 1 AND used = 0 ORDER BY id DESC LIMIT 1"
+            ).fetchone()
+            self.assertIsNotNone(otp_row)
+            valid_otp = otp_row["otp_code"]
+
+        # Valid OTP succeeds and logs in
+        resp = self.client.post("/verify-2fa", data={"otp_code": valid_otp}, follow_redirects=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Overview", resp.data)
+        self.assertIn(b"Welcome back, Ardhra", resp.data)
+
+    # --- Vulnerable 2FA Security Lab Tests -----------------------------------
+    def test_vulnerable_2fa_lab_bypasses(self):
+        # Initiate lab 2FA
+        resp = self.client.post(
+            "/lab/2fa/login",
+            data={"email": "admin@medicore.test", "password": "Passw0rd!"},
+            follow_redirects=False,
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/lab/2fa/verify", resp.headers.get("Location", ""))
+
+        # Bypass 1: Header-based bypass (X-Bypass-2FA: true)
+        resp = self.client.post(
+            "/lab/2fa/verify",
+            data={"otp_code": "wrong1"},
+            headers={"X-Bypass-2FA": "true"},
+            follow_redirects=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"EXPLOIT SUCCESSFUL", resp.data)
+        self.assertIn(b"Header-based bypass", resp.data)
+
+        # Re-login for Bypass 2
+        self.client.post(
+            "/lab/2fa/login",
+            data={"email": "admin@medicore.test", "password": "Passw0rd!"},
+            follow_redirects=False,
+        )
+
+        # Bypass 2: Universal master code (000000)
+        resp = self.client.post(
+            "/lab/2fa/verify",
+            data={"otp_code": "000000"},
+            follow_redirects=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"EXPLOIT SUCCESSFUL", resp.data)
+        self.assertIn(b"Master code bypass", resp.data)
+
+    # --- Rate Limiting Lab Tests --------------------------------------------
+    def test_rate_limit_lab_scenarios(self):
+        from security_lab.rate_limit_bypass.routes import _PROTECTED_ATTEMPTS
+        _PROTECTED_ATTEMPTS.clear()
+
+        # Protected endpoint enforces 429 after 5 failed attempts
+        for i in range(5):
+            resp = self.client.post("/lab/rate-limit/verify-otp-protected", json={"pin": "0000"})
+            self.assertEqual(resp.status_code, 400)
+
+        # 6th attempt is blocked with HTTP 429
+        resp = self.client.post("/lab/rate-limit/verify-otp-protected", json={"pin": "0000"})
+        self.assertEqual(resp.status_code, 429)
+
+        # Vulnerable endpoint allows unlimited requests with no 429 lockout
+        for i in range(12):
+            resp = self.client.post("/lab/rate-limit/verify-otp-vulnerable", json={"pin": f"100{i}"})
+            self.assertEqual(resp.status_code, 400)
+
+        # Correct PIN 4281 succeeds immediately on vulnerable endpoint
+        resp = self.client.post("/lab/rate-limit/verify-otp-vulnerable", json={"pin": "4281"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.get_json().get("success"))
+
+    # --- JWT Vulnerability & Privilege Escalation Lab Tests -----------------
+    def test_jwt_lab_privilege_escalation(self):
+        # Login and obtain standard non-admin JWT
+        resp = self.client.post(
+            "/lab/jwt/login",
+            data={"email": "admin@medicore.test", "password": "Passw0rd!"},
+            follow_redirects=False,
+        )
+        self.assertEqual(resp.status_code, 302)
+
+        # Access with non-admin token fails (using helper to forge patient token)
+        from security_lab.jwt_vulnerabilities.routes import create_lab_jwt
+        patient_payload = {
+            "sub": 8,
+            "email": "eldho.paulose@medicore.test",
+            "name": "Eldho Paulose",
+            "role": "patient",
+            "isAdmin": False,
+        }
+        legit_token = create_lab_jwt(patient_payload, alg="HS256")
+        resp = self.client.get(
+            "/lab/jwt/admin",
+            headers={"Authorization": f"Bearer {legit_token}", "Accept": "application/json"},
+        )
+        self.assertEqual(resp.status_code, 403)
+        self.assertIn("Privilege Escalation Required", resp.get_json().get("error", ""))
+
+        # Exploit: forge token with alg: "none" and isAdmin: true
+        escalated_payload = {
+            "sub": 8,
+            "email": "eldho.paulose@medicore.test",
+            "name": "Eldho Paulose",
+            "role": "admin",
+            "isAdmin": True,
+        }
+        forged_token = create_lab_jwt(escalated_payload, alg="none")
+        resp = self.client.get(
+            "/lab/jwt/admin",
+            headers={"Authorization": f"Bearer {forged_token}", "Accept": "application/json"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertIn("GRANTED", data.get("access", ""))
+        self.assertEqual(data.get("authenticated_claims", {}).get("isAdmin"), True)
+
+    # --- Information Disclosure Lab Tests ------------------------------------
+    def test_information_disclosure_lab(self):
+        resp = self.client.get("/lab/info-disclosure/diagnostics?format=json")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertIn("server_environment", data)
+        self.assertIn("application_configuration", data)
+        self.assertIn("database_internals", data)
+        self.assertIn("python_executable", data["server_environment"])
+        self.assertIn("users", data["database_internals"]["active_tables"])
+
 
 if __name__ == "__main__":
     unittest.main()

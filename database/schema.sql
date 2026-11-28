@@ -21,6 +21,7 @@ CREATE TABLE users (
     password_hash   TEXT NOT NULL,
     role            TEXT NOT NULL CHECK (role IN ('admin', 'doctor', 'receptionist', 'patient')),
     is_active       INTEGER NOT NULL DEFAULT 1,
+    two_factor_enabled INTEGER NOT NULL DEFAULT 0,
     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -110,6 +111,15 @@ CREATE TABLE password_resets (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     token_hash      TEXT NOT NULL,             -- secure path stores only a hash of a random token
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at      TEXT NOT NULL,
+    used            INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE otp_codes (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    otp_code        TEXT NOT NULL,
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     expires_at      TEXT NOT NULL,
     used            INTEGER NOT NULL DEFAULT 0

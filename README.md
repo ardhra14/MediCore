@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Database-SQLite%203-003B57?logo=sqlite&logoColor=white" alt="SQLite 3">
   <img src="https://img.shields.io/badge/UI-Bootstrap%205.3%20%7C%20Chart.js-purple" alt="Bootstrap 5.3">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License">
-  <img src="https://img.shields.io/badge/Tests-19%20Passed-success" alt="Tests Passed">
+  <img src="https://img.shields.io/badge/Tests-24%20Passed-success" alt="Tests Passed">
 </p>
 
 ---
@@ -163,29 +163,43 @@ The application automatically attaches defense-in-depth HTTP security headers to
 
 ## Isolated Security Lab (Educational Penetration Testing)
 
-MediCore houses two intentionally vulnerable authentication implementations located in `security_lab/`. These exist exclusively for security researchers, students, and penetration testers to understand real-world authentication flaws.
+MediCore houses six intentionally vulnerable security lab exercises located in `security_lab/`. These exist exclusively for security researchers, students, and penetration testers to understand real-world authentication and application flaws.
 
 ### Lab Safety Guardrails
 - **Disabled by default**: `SECURITY_LAB_ENABLED=0` in `config.py` and `.env`.
 - **Localhost Bound**: A `before_request` hook returns HTTP 403 Forbidden if the request `Host` is not `127.0.0.1` or `localhost`.
-- **Data Isolation**: The lab maintains its own separate tables (`vuln_reset_tokens`, `vuln_sessions`) and never shares state with production authentication.
+- **Data Isolation**: The lab maintains its own separate tables (`vuln_reset_tokens`, `vuln_sessions`, `vuln_2fa_codes`) and never shares state with production authentication.
 
 ### Vulnerability 1: Weak Password Recovery (CWE-640, CWE-330)
 - **Endpoint**: `/lab/password-recovery/forgot-password` &amp; `/lab/password-recovery/reset/<token>`
 - **Flaw**: Reset tokens are computed using deterministic string formatting:
-  ```python
-  # security_lab/broken_password_recovery/routes.py
-  now = datetime.utcnow()
-  user_part = f"{user['id'] % 100:02d}"
-  time_part = f"{now.hour * 60 + now.minute:04d}"
-  token = f"{user_part}{time_part}"  # Only 6 digits; easily guessable!
-  ```
-- **Remediation**: Use `secrets.token_urlsafe(32)`, store only a SHA-256 hash in the database, set an expiry timestamp (15 minutes), and mark single-use upon redemption (as implemented in `app/auth/routes.py`).
+  `f"{user['id'] % 100:02d}{now.hour * 60 + now.minute:04d}"` (easily guessable).
+- **Remediation**: Use `secrets.token_urlsafe(32)`, store only a SHA-256 hash, and enforce 15-minute single-use expiry.
 
 ### Vulnerability 2: Insecure Session Management (CWE-384, CWE-330)
 - **Endpoint**: `/lab/session-demo/login` &amp; `/lab/session-demo/whoami`
-- **Flaw**: The session cookie (`lab_session`) is set directly to the sequential auto-incrementing integer primary key from the `vuln_sessions` table, lacking `HttpOnly` and `SameSite` flags.
-- **Remediation**: Issue high-entropy 256-bit CSPRNG tokens, store them server-side, and configure `HttpOnly=True`, `SameSite=Lax`, and `Secure=True` cookies.
+- **Flaw**: The session cookie (`lab_session`) is set directly to sequential integers lacking `HttpOnly` and `SameSite` flags.
+- **Remediation**: Issue high-entropy 256-bit CSPRNG tokens with `HttpOnly`, `SameSite=Lax`, and `Secure` attributes.
+
+### Vulnerability 3: Two-Factor Authentication (2FA) Bypass (CWE-304, CWE-287)
+- **Endpoint**: `/lab/2fa/login` &amp; `/lab/2fa/verify`
+- **Flaw**: OTP verification can be bypassed via header (`X-Bypass-2FA: true`), universal master codes (`000000`), or step-skipping parameters (`?skip_2fa=1`).
+- **Remediation**: Cryptographically verify OTP codes server-side against the authenticated session, reject unrecognized bypass headers, and avoid universal backdoor codes.
+
+### Vulnerability 4: Rate Limit Bypass & Missing Rate Limiting (CWE-307)
+- **Endpoint**: `/lab/rate-limit/` (`/verify-otp-vulnerable` &amp; `/verify-otp-header-bypass`)
+- **Flaw**: An unthrottled 4-digit PIN verification endpoint allows automated brute-force attacks, while a header-bypass endpoint allows evading limits via `X-Forwarded-For`.
+- **Remediation**: Enforce server-side rate limits on remote socket addresses, progressive lockouts, and CAPTCHAs.
+
+### Vulnerability 5: JWT Signature Bypass & Privilege Escalation (CWE-347, CWE-345)
+- **Endpoint**: `/lab/jwt/` (`/login`, `/admin`, `/forge`)
+- **Flaw**: The JWT parser accepts tokens with `alg: "none"` and skips cryptographic signature validation, allowing patients to modify `{"isAdmin": false}` to `{"isAdmin": true}` to gain administrative portal access.
+- **Remediation**: Whitelist permitted signing algorithms (e.g. HS256), strictly reject `alg: "none"`, and verify HMAC signatures before trusting claims.
+
+### Vulnerability 6: Technical Information Disclosure (CWE-200, CWE-209)
+- **Endpoint**: `/lab/info-disclosure/diagnostics`
+- **Flaw**: Exposed diagnostic endpoint exposes absolute server filesystem paths, Python interpreter paths, session configuration attributes, database schemas, and framework routing maps.
+- **Remediation**: Disable diagnostic endpoints in production, restrict administrative telemetry behind internal network boundaries, and ensure error handlers mask technical traces.
 
 For complete reproduction walkthroughs, refer to [`docs/security_testing.md`](docs/security_testing.md).
 
@@ -202,7 +216,7 @@ For complete reproduction walkthroughs, refer to [`docs/security_testing.md`](do
 | **Backend** | Python 3.9+, Flask 3.0+ | Modular Flask Blueprint architecture |
 | **Security** | Werkzeug 3.0+ | PBKDF2-HMAC-SHA256 password hashing, CSPRNG tokens, rate limiting |
 | **Database** | SQLite 3 | 10 relational tables with cascading foreign keys (`PRAGMA foreign_keys = ON`) |
-| **Testing** | Python `unittest` &amp; `pytest` | 19 automated tests covering auth, RBAC, CRUD, and lab flows |
+| **Testing** | Python `unittest` &amp; `pytest` | 24 automated tests covering auth, 2FA, RBAC, CRUD, and lab flows |
 
 ---
 
@@ -268,7 +282,7 @@ All pre-seeded test accounts use the password: **`Passw0rd!`**
 | Role | Name | Email Address | Department / Title |
 |---|---|---|---|
 | **Administrator** | Ardhra | `admin@medicore.test` | System Administration &amp; Hospital Management |
-| **Doctor** | Dr. Harikrishnan Nair | `dr.harikrishnan@medicore.test` | Interventional Cardiology |
+| **Doctor** | Dr. Siddharth Menon | `dr.siddharth@medicore.test` | Interventional Cardiology |
 | **Doctor** | Dr. Ananya Kurian | `dr.ananya@medicore.test` | Pediatric &amp; Neonatal Care |
 | **Doctor** | Dr. Mathew Varghese | `dr.mathew@medicore.test` | Orthopedic Surgery &amp; Arthroscopy |
 | **Doctor** | Dr. Fathima Beevi | `dr.fathima@medicore.test` | Clinical &amp; Aesthetic Dermatology |
@@ -284,14 +298,20 @@ All pre-seeded test accounts use the password: **`Passw0rd!`**
 
 ## Running Automated Tests
 
-MediCore includes an automated 19-point unit test suite verifying:
+MediCore includes an automated 24-point unit test suite verifying:
 - Public pages and interactive contact forms
-- User registration, login, session issuance, and logout
-- Login rate-limiting and temporary account lockout
+- User registration, login, rate-limiting, and logout
+- Functional OTP-based two-factor authentication (2FA) and 2FA rate limiting
 - Secure cryptographic password reset flow
 - Full CRUD operations for Patients, Doctors, Appointments, Medical Records, Departments, and Staff
 - Role-based access control restrictions (patient and doctor role barriers)
-- Both intentionally vulnerable security lab mechanisms and exploit verifications
+- All six intentionally vulnerable security lab mechanisms and exploit verifications:
+  1. Predictable password recovery (CWE-640)
+  2. Sequential session IDs (CWE-384)
+  3. Two-factor authentication bypass (CWE-304/CWE-287)
+  4. Missing rate limiting & IP header spoofing (CWE-307)
+  5. JWT privilege escalation via alg: none (CWE-347/CWE-345)
+  6. Technical diagnostic information disclosure (CWE-200/CWE-209)
 
 Run the test suite with standard library `unittest`:
 ```bash

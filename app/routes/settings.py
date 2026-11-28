@@ -151,3 +151,20 @@ def revoke_others():
 
     flash("All other active sessions have been signed out.", "success")
     return redirect(url_for("settings.index"))
+
+
+@settings_bp.route("/security/2fa", methods=["POST"])
+@login_required
+def toggle_2fa():
+    db = get_db()
+    user = current_user()
+    user_keys = user.keys() if hasattr(user, "keys") else []
+    current_status = user["two_factor_enabled"] if "two_factor_enabled" in user_keys else 0
+    new_status = 0 if current_status else 1
+
+    db.execute("UPDATE users SET two_factor_enabled = ? WHERE id = ?", (new_status, user["id"]))
+    db.commit()
+
+    action = "enabled" if new_status else "disabled"
+    flash(f"Two-factor authentication has been {action} for your account.", "success")
+    return redirect(url_for("settings.index"))

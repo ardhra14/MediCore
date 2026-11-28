@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}JWT Privilege Escalation Lab — MediCore{% endblock %}
+{% block public_content %}
+<div class="public-wrapper py-5">
+  <div class="card-surface mx-auto" style="max-width: 860px;">
+    <div class="card-header-flex">
+      <h6 class="card-header-title mb-0">
+        <i class="bi bi-key text-danger"></i> JWT Token Validation &amp; Privilege Escalation Lab
+      </h6>
+      <span class="badge bg-danger-subtle text-danger border border-danger-subtle">CWE-347 / CWE-345</span>
+    </div>
+    <div class="p-4">
+      {% include "_flash.html" %}
+
+      <div class="alert alert-warning small mb-4">
+        <strong><i class="bi bi-info-circle-fill"></i> Lab Objective:</strong>
+        MediCore provides a clinical API using JSON Web Tokens (JWT). The token parser suffers from the classic <code>alg: "none"</code> flaw. By modifying your token's payload to set <code>"isAdmin": true</code> and changing the algorithm header to <code>"none"</code>, escalate your privileges to gain unauthorized access to the restricted Clinical Administration Portal.
+      </div>
+
+      <div class="row g-4 mb-4">
+        <!-- Step 1: Issue Legitimate Non-Admin Token -->
+        <div class="col-md-6">
+          <div class="card h-100 border p-3 bg-light">
+            <h6 class="fw-bold small text-dark mb-2">Step 1: Sign in as Regular Patient</h6>
+            <p class="small text-muted mb-3">Obtain a validly signed HS256 JWT with <code>"isAdmin": false</code>.</p>
+            <form method="post" action="{{ url_for('vuln_jwt.login') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <div class="mb-2">
+                <label class="form-label small text-muted">Patient Email</label>
+                <input class="form-control form-control-sm" type="email" name="email" value="eldho.paulose@medicore.test" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label small text-muted">Password</label>
+                <input class="form-control form-control-sm" type="password" name="password" value="Passw0rd!" required>
+              </div>
+              <button class="btn btn-outline-primary btn-sm w-100" type="submit">
+                <i class="bi bi-box-arrow-in-right"></i> Issue Legitimate Token
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Step 2: Forge Unverified alg: none Token -->
+        <div class="col-md-6">
+          <div class="card h-100 border p-3 bg-light border-danger">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="fw-bold small text-danger mb-0">Step 2: Exploit 'alg: none' Flaw</h6>
+              <span class="badge bg-danger">Privilege Escalation</span>
+            </div>
+            <p class="small text-muted mb-3">Forge a modified token with <code>"isAdmin": true</code> and <code>"alg": "none"</code>.</p>
+            <form method="post" action="{{ url_for('vuln_jwt.forge') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="sub" value="8">
+              <input type="hidden" name="name" value="Eldho Paulose">
+              <input type="hidden" name="email" value="eldho.paulose@medicore.test">
+              <input type="hidden" name="isAdmin" value="true">
+              <button class="btn btn-danger btn-sm w-100 mb-2 py-2" type="submit">
+                <i class="bi bi-lightning-charge-fill"></i> Forge Token (isAdmin: true &amp; alg: none)
+              </button>
+            </form>
+            <div class="small text-muted" style="font-size: 0.78rem;">
+              Directly generates <code>header.payload.</code> with no signature check enforced by the server.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Token Inspector -->
+      <div class="card p-3 bg-white border mb-4">
+        <h6 class="fw-bold small text-dark mb-2 d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-cpu text-teal"></i> Active JWT Token Inspector</span>
+          {% if current_token %}
+            <a href="{{ url_for('vuln_jwt.logout') }}" class="small text-danger text-decoration-none">Clear Token</a>
+          {% endif %}
+        </h6>
+        
+        {% if current_token %}
+          <div class="mb-2">
+            <label class="form-label small text-muted mb-1">Encoded Token:</label>
+            <textarea class="form-control form-control-sm font-monospace text-xs" rows="2" readonly>{{ current_token }}</textarea>
+          </div>
+          <div class="p-2 bg-light rounded border small">
+            <div class="row g-2">
+              <div class="col-sm-6">
+                <strong>Verification Mode:</strong> <span class="badge bg-info text-dark">{{ verification_status }}</span>
+              </div>
+              <div class="col-sm-6">
+                <strong>isAdmin Claim:</strong> 
+                {% if claims and claims.get('isAdmin') %}
+                  <span class="badge bg-danger">TRUE (Admin Escalated)</span>
+                {% else %}
+                  <span class="badge bg-secondary">FALSE (Regular User)</span>
+                {% endif %}
+              </div>
+            </div>
+            {% if claims %}
+              <div class="mt-2 pt-2 border-top">
+                <strong>Decoded Claims Payload:</strong>
+                <pre class="mb-0 mt-1 font-monospace" style="font-size: 0.75rem;">{{ claims | tojson(indent=2) }}</pre>
+              </div>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="text-muted small text-center py-3">No JWT token currently loaded. Sign in or forge a token above.</div>
+        {% endif %}
+      </div>
+
+      <!-- Access Restricted Admin Endpoint -->
+      <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+        <span class="small text-muted">Target Endpoint: <code>/lab/jwt/admin</code></span>
+        <a href="{{ url_for('vuln_jwt.admin_portal') }}" class="btn btn-primary btn-sm px-4">
+          <i class="bi bi-shield-lock"></i> Access Restricted Admin Portal &rarr;
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
